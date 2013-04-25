@@ -9,6 +9,9 @@
 #   locale={locale_pattern}
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="HK"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="HK"]
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="MO"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="MO"]
+# Android patch (b/8264703) begin.
+xpath ; //ldml/localeDisplayNames/territories/territory[@type="PS"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="PS"]
+# Android patch (b/8264703) end.
 
 ## Value substitutions ##
 # value ; {old_value} ; {new_value} ; {options}
