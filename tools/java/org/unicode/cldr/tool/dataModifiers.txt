@@ -7,7 +7,13 @@
 # speed up the filtering process.
 # Possible options:
 #   locale={locale_pattern}
+# Android patch (b/36123938) begin.
+xpath ; //ldml/localeDisplayNames/territories/territory[@type="FK"][@alt="variant"] ; //ldml/localeDisplayNames/territories/territory[@type="FK"]
+# Android patch (b/36123938) end.
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="HK"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="HK"]
+# Android patch (b/36123938) begin.
+xpath ; //ldml/localeDisplayNames/territories/territory[@type="MK"][@alt="variant"] ; //ldml/localeDisplayNames/territories/territory[@type="MK"]
+# Android patch (b/36123938) end.
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="MO"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="MO"]
 # Android patch (b/8264703) begin.
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="PS"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="PS"]
