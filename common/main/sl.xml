@@ -1475,7 +1475,9 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 					</dateFormatLength>
 					<dateFormatLength type="short">
 						<dateFormat>
-							<pattern>d. MM. yy GGGGG</pattern>
+							<!-- Android patch (CLDR ticket #7991) begin. -->
+							<pattern>d. M. yy GGGGG</pattern>
+							<!-- Android patch (CLDR ticket #7991) end. -->
 						</dateFormat>
 					</dateFormatLength>
 				</dateFormats>
@@ -1956,7 +1958,9 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 					</dateFormatLength>
 					<dateFormatLength type="short">
 						<dateFormat>
-							<pattern>d. MM. yy</pattern>
+							<!-- Android patch (CLDR ticket #7991) begin. -->
+							<pattern>d. M. yy</pattern>
+							<!-- Android patch (CLDR ticket #7991) end. -->
 						</dateFormat>
 					</dateFormatLength>
 				</dateFormats>
