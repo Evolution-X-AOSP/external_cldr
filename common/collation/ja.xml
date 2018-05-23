@@ -23,7 +23,7 @@ For terms of use, see http://www.unicode.org/copyright.html
 				-->
 			<cr><![CDATA[
 				[strength 3]
-				[reorder Latn Kana Hani]
+				[reorder Kana Hani] # Android patch (b/13790528).
 				&ゝ<<<<ヽ # iteration marks \u309D, \u30FD
 
 				# The length mark sorts tertiary less-than the
