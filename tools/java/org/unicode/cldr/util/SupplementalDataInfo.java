@@ -3146,7 +3146,14 @@ public class SupplementalDataInfo {
                     if (b.length() != 0) {
                         b.append(", ");
                     }
-                    b.append(fractions.get(i));
+                    // Android patch (CLDR ticket #11014) begin.
+                    FixedDecimal fraction = fractions.get(i);
+                    String formatted = String.format(
+                            Locale.ROOT,
+                            "%." + fraction.getVisibleDecimalDigitCount() + "f",
+                            fraction.getSource());
+                    b.append(formatted);
+                    // Android patch (CLDR ticket #11014) end.
                     ++fractionCount;
                 }
                 b.append(", …");
