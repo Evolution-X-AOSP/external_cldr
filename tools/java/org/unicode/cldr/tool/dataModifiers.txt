@@ -18,6 +18,9 @@ xpath ; //ldml/localeDisplayNames/territories/territory[@type="MO"][@alt="short"
 # Android patch (b/8264703) begin.
 xpath ; //ldml/localeDisplayNames/territories/territory[@type="PS"][@alt="short"] ; //ldml/localeDisplayNames/territories/territory[@type="PS"]
 # Android patch (b/8264703) end.
+# Android patch (b/21295835) begin.
+xpath ; //ldml/numbers/currencies/currency[@type="UAH"]/symbol[@alt="variant"] ; //ldml/numbers/currencies/currency[@type="UAH"]/symbol
+# Android patch (b/21295835) end.
 
 ## Value substitutions ##
 # value ; {old_value} ; {new_value} ; {options}
