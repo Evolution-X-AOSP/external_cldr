@@ -7,7 +7,9 @@
 	<languageMatching>
 		<languageMatches type="written">
 			<!-- Base Language Matches -->
-			<languageMatch desired="no" supported="nb" percent="99"/>  <!-- The language no is normally taken as nb in content. -->
+			<!-- Android patch (CLDR ticket #2698) begin. -->
+			<languageMatch desired="nb" supported="no" percent="99"/>  <!-- The language no is normally taken as nb in content. -->
+			<!-- Android patch (CLDR ticket #2698) end. -->
 			<!-- These are like regional variants -->
 			<!-- languageMatch desired="ku" supported="ckb" percent="96" oneway="true"/ -->  
 			<languageMatch desired="hr" supported="bs" percent="96"/>   <!-- Serbo-croatian variants are all very close. -->
@@ -96,8 +98,10 @@
 			<languageMatch desired="my_Mymr" supported="en_Latn" percent="90" oneway="true"/>
 			<languageMatch desired="ne" supported="en" percent="90" oneway="true"/> <!-- fix ICU for en_GB -->
 			<languageMatch desired="ne_Deva" supported="en_Latn" percent="90" oneway="true"/>
-			<languageMatch desired="nn" supported="nb" percent="90"/>
-			<languageMatch desired="nn" supported="no" percent="90" oneway="true"/>
+			<!-- Android patch (CLDR ticket #2698) begin. -->
+			<languageMatch desired="nn" supported="no" percent="90"/>
+			<languageMatch desired="nn" supported="nb" percent="90" oneway="true"/>
+			<!-- Android patch (CLDR ticket #2698) end. -->
 			<languageMatch desired="nso" supported="en" percent="90" oneway="true"/>
 			<languageMatch desired="ny" supported="en" percent="90" oneway="true"/>
 			<languageMatch desired="nyn" supported="en" percent="90" oneway="true"/>
