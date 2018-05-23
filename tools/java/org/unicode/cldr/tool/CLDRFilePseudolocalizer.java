@@ -22,7 +22,9 @@ import org.unicode.cldr.util.XMLSource;
 public class CLDRFilePseudolocalizer {
     private static final Pattern NUMERIC_PLACEHOLDER = Pattern.compile("\\{\\d+\\}");
     private static final Pattern QUOTED_TEXT = Pattern.compile("'.*?'");
-    private static final String PSEUDOLOCALES_DIRECTORY = "pseudolocales";
+    // Android patch (b/37077221) begin.
+    private static final String PSEUDOLOCALES_DIRECTORY = ".";
+    // Android patch (b/37077221) end.
     private static final String ORIGINAL_LOCALE = "en";
     private static final String EXEMPLARS_PATH = "/exemplarCharactersx";
     private static final String EXEMPLAR_PATH = "//ldml/characters/exemplarCharacters";
