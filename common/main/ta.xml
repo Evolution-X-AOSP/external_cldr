@@ -1866,11 +1866,12 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 				</quarters>
 				<dayPeriods>
 					<dayPeriodContext type="format">
+						<!-- Android patch (b/5948448) begin. -->
 						<dayPeriodWidth type="abbreviated">
 							<dayPeriod type="midnight">நள்ளிரவு</dayPeriod>
-							<dayPeriod type="am">முற்பகல்</dayPeriod>
+							<dayPeriod type="am">AM</dayPeriod>
 							<dayPeriod type="noon">நண்பகல்</dayPeriod>
-							<dayPeriod type="pm">பிற்பகல்</dayPeriod>
+							<dayPeriod type="pm">PM</dayPeriod>
 							<dayPeriod type="morning1">அதிகாலை</dayPeriod>
 							<dayPeriod type="morning2">காலை</dayPeriod>
 							<dayPeriod type="afternoon1">மதியம்</dayPeriod>
@@ -1879,6 +1880,7 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 							<dayPeriod type="evening2">அந்தி மாலை</dayPeriod>
 							<dayPeriod type="night1">இரவு</dayPeriod>
 						</dayPeriodWidth>
+						<!-- Android patch (b/5948448) end. -->
 						<dayPeriodWidth type="narrow">
 							<dayPeriod type="midnight">நள்.</dayPeriod>
 							<dayPeriod type="am">மு.ப</dayPeriod>
