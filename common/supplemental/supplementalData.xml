@@ -4609,7 +4609,7 @@ XXX Code for transations where no currency is involved
         <calendarPreference territories="001" ordering="gregorian"/>
         <calendarPreference territories="DJ DZ EH ER IQ JO KM LB LY MA MR OM PS SD SY TD TN YE" ordering="gregorian islamic islamic-civil islamic-tbla"/>
         <calendarPreference territories="AE BH KW QA" ordering="gregorian islamic-umalqura islamic islamic-civil islamic-tbla"/>
-        <calendarPreference territories="AF IR" ordering="persian gregorian islamic islamic-civil islamic-tbla"/>
+        <calendarPreference territories="AF IR" ordering="gregorian persian islamic islamic-civil islamic-tbla"/> <!-- Android patch: Gregorian default. -->
         <calendarPreference territories="CN CX HK MO SG" ordering="gregorian chinese"/>
         <calendarPreference territories="EG" ordering="gregorian coptic islamic islamic-civil islamic-tbla"/>
         <calendarPreference territories="ET" ordering="gregorian ethiopic"/>
@@ -4617,8 +4617,8 @@ XXX Code for transations where no currency is involved
         <calendarPreference territories="IN" ordering="gregorian indian"/>
         <calendarPreference territories="JP" ordering="gregorian japanese"/>
         <calendarPreference territories="KR" ordering="gregorian dangi"/>
-        <calendarPreference territories="SA" ordering="islamic-umalqura gregorian islamic islamic-rgsa"/>
-        <calendarPreference territories="TH" ordering="buddhist gregorian"/>
+        <calendarPreference territories="SA" ordering="gregorian islamic-umalqura islamic islamic-rgsa"/> <!-- Android patch: Gregorian default. -->
+        <calendarPreference territories="TH" ordering="gregorian buddhist"/> <!-- Android patch: Gregorian default. -->
         <calendarPreference territories="TW" ordering="gregorian roc chinese"/>
     </calendarPreferenceData>
 	<weekData>
