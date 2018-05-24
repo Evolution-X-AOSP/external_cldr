@@ -5502,9 +5502,11 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 			</metazone>
 			<metazone type="Korea">
 				<long>
-					<generic>대한민국 시간</generic>
-					<standard>대한민국 표준시</standard>
-					<daylight>대한민국 하계 표준시</daylight>
+					<!-- Android patch (b/16639166) begin. -->
+					<generic>한국 시간</generic>
+					<standard>한국 표준시</standard>
+					<daylight>한국 하계 표준시</daylight>
+					<!-- Android patch (b/16639166) end. -->
 				</long>
 			</metazone>
 			<metazone type="Kosrae">
