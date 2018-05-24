@@ -1604,24 +1604,26 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 							<dayPeriod type="evening1">शाम</dayPeriod>
 							<dayPeriod type="night1">रात</dayPeriod>
 						</dayPeriodWidth>
+						<!-- Android patch (b/5948448) begin. -->
 						<dayPeriodWidth type="narrow">
-							<dayPeriod type="midnight">मध्यरात्रि</dayPeriod>
-							<dayPeriod type="am">पू</dayPeriod>
-							<dayPeriod type="pm">अ</dayPeriod>
+							<dayPeriod type="midnight" draft="contributed">m</dayPeriod>
+							<dayPeriod type="am">am</dayPeriod>
+							<dayPeriod type="pm">pm</dayPeriod>
 							<dayPeriod type="morning1">सुबह</dayPeriod>
 							<dayPeriod type="afternoon1">अपराह्न</dayPeriod>
 							<dayPeriod type="evening1">शाम</dayPeriod>
 							<dayPeriod type="night1">रात</dayPeriod>
 						</dayPeriodWidth>
 						<dayPeriodWidth type="wide">
-							<dayPeriod type="midnight">मध्यरात्रि</dayPeriod>
-							<dayPeriod type="am">पूर्वाह्न</dayPeriod>
-							<dayPeriod type="pm">अपराह्न</dayPeriod>
+							<dayPeriod type="midnight" draft="contributed">midnight</dayPeriod>
+							<dayPeriod type="am">am</dayPeriod>
+							<dayPeriod type="pm">pm</dayPeriod>
 							<dayPeriod type="morning1">सुबह</dayPeriod>
 							<dayPeriod type="afternoon1">अपराह्न</dayPeriod>
 							<dayPeriod type="evening1">शाम</dayPeriod>
 							<dayPeriod type="night1">रात</dayPeriod>
 						</dayPeriodWidth>
+						<!-- Android patch (b/5948448) end. -->
 					</dayPeriodContext>
 					<dayPeriodContext type="stand-alone">
 						<dayPeriodWidth type="abbreviated">
