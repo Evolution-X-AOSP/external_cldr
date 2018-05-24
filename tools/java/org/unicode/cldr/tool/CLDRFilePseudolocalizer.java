@@ -26,7 +26,9 @@ public class CLDRFilePseudolocalizer {
     private static final String PSEUDOLOCALES_DIRECTORY = ".";
     // Android patch (b/37077221) end.
     private static final String ORIGINAL_LOCALE = "en";
-    private static final String EXEMPLARS_PATH = "/exemplarCharactersx";
+    // Android patch (b/37512961) begin.
+    private static final String NUMBERS_PATH = "//ldml/numbers/defaultNumberingSystem";
+    // Android patch (b/37512961) end.
     private static final String EXEMPLAR_PATH = "//ldml/characters/exemplarCharacters";
     private static final String EXEMPLAR_AUX_PATH =
         "//ldml/characters/exemplarCharacters[@type=\"auxiliary\"]";
@@ -199,14 +201,16 @@ public class CLDRFilePseudolocalizer {
     private static class PseudolocalizerXB extends Pseudolocalizer {
       /** Right-to-left override character. */
       private static final String RLO = "\u202e";
-      /** Right-to-left mark character. */
-      private static final String RLM = "\u200f";
+      // Android patch (b/37512961) begin.
+      /** Arabic letter mark character. */
+      private static final String ALM = "\u061C";
       /** Pop direction formatting character. */
       private static final String PDF = "\u202c";
       /** Prefix to add before each LTR word */
-      private static final String BIDI_PREFIX = RLM + RLO;
+      private static final String BIDI_PREFIX = ALM + RLO;
       /** Postfix to add after each LTR word */
-      private static final String BIDI_POSTFIX = PDF + RLM;
+      private static final String BIDI_POSTFIX = PDF + ALM;
+      // Android patch (b/37512961) end.
       public String fragment(String text) {
         StringBuilder output = new StringBuilder();
         boolean wrapping = false;
@@ -352,6 +356,10 @@ public class CLDRFilePseudolocalizer {
         // Create fake pseudolocales territories.
         addTerritory(outputSource, "XA");
         addTerritory(outputSource, "XB");
+        // Android patch (b/37512961) begin.
+        // Use latin numbers for pseudolocales.
+        outputSource.putValueAtPath(NUMBERS_PATH, "latn");
+        // Android patch (b/37512961) end.
         return new CLDRFile(outputSource);
     }
     /**
