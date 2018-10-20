@@ -201,11 +201,9 @@ public class TestAnnotations extends TestFmwkPlus {
                 String name = entry.getKey();
                 Collection<String> emojis = entry.getValue();
                 if (emojis.size() > 1) {
-                    if (!locale.equals("sw") || Collections.frequency(emojis, "🇬🇧") < 1 || !logKnownIssue("10997", "Swahili name collision GB vs gbeng, r14129 removed GB")) {
-                        errln("Duplicate name in " + locale + ": “" + name + "” for "
-                            + CollectionUtilities.join(emojis, " & "));
-                        localeToNameToEmoji.putAll(locale + "\t" + name, emojis);
-                    }
+                    errln("Duplicate name in " + locale + ": “" + name + "” for "
+                        + CollectionUtilities.join(emojis, " & "));
+                    localeToNameToEmoji.putAll(locale + "\t" + name, emojis);
                 }
             }
         }
