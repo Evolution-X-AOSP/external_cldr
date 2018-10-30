@@ -94,7 +94,7 @@ h2, h3, h4, table {
 		<table border="1" cellpadding="2" cellspacing="0" class="wide">
 			<tr>
 				<td>Version</td>
-				<td>33</td>
+				<td>34</td>
 			</tr>
 			<tr>
 				<td>Editors</td>
@@ -1310,7 +1310,7 @@ h2, h3, h4, table {
 			&lt;!ATTLIST unitPattern count (0 | 1 | zero | one | two | few | many
 			| other) #REQUIRED &gt; <br> <br> &lt;!ELEMENT
 			compoundUnitPattern ( #PCDATA ) &gt;<br> <br> &lt;!ELEMENT
-			coordinateUnit ( alias | ( coordinateUnitPattern*, special* ) ) &gt;<br>&lt;!ELEMENT
+			coordinateUnit ( alias | ( displayName*, coordinateUnitPattern*, special* ) ) &gt;<br>&lt;!ELEMENT
 			coordinateUnitPattern ( #PCDATA ) &gt;<br> &lt;!ATTLIST
 			coordinateUnitPattern type (north | east | south | west) #REQUIRED
 			&gt; <br> <br> &lt;!ELEMENT durationUnitPattern ( #PCDATA )
@@ -1323,12 +1323,17 @@ h2, h3, h4, table {
 			rules that produce this example are as follows ({0} indicates the
 			position of the formatted numeric value):</p>
 
-		<pre>&lt;unit type="day"&gt;
+		<pre>&lt;unit type="duration-day"&gt;
 &nbsp;&nbsp;&lt;displayName&gt;days&lt;/displayName&gt;
 &nbsp;&nbsp;&lt;unitPattern count="one"&gt;<span style="color: blue">{0} day</span>&lt;/unitName&gt;
 &nbsp;&nbsp;&lt;unitPattern count="other"&gt;<span style="color: blue">{0} days</span>&lt;/unitName&gt;
 &lt;/unit&gt;</pre>
 
+		<p>In addition to supporting language-specific plural cases
+			such as “one” and “other”, unitPatterns support the language-independent
+			explicit cases “0” and “1” for special handling of numeric values that are
+			exactly 0 or 1; see
+			<a href="tr35-numbers.html#Explicit_0_1_rules">Explicit 0 and 1 rules</a>.</p>
 		<p>
 			Units, like other values with a <strong>count</strong> attribute, use
 			a special inheritance. See <strong>Part 1: Core:</strong> <em>Section
@@ -1350,19 +1355,19 @@ h2, h3, h4, table {
 			</tr>
 		</table>
 		<p>&nbsp;</p>
-		<p>The units in CLDR are not comprehensive; it is anticipated that
-			more will be added over time. The codes currently supported are found
-			in the root.xml file, in items of the type:</p>
-		<p class="xmlExample">&lt;unit type=&quot;X-Y&quot;&gt;</p>
-		<p>
-			The characters up to the first hyphen are the <strong>type</strong>,
-			while the remainder after that hyphen are the <strong>unit</strong>.
-		</p>
+		<p>The value of the type attribute are <em>unit identifiers</em>. Syntactically, they have the following structure:</p>
+		<div class='syntax'>
+		<p>unit_identifier := type &quot;-&quot; unit</p>
+		<p>type := [a-z]+</p>
+		<p>unit := [a-z]+([-][a-z]+)*</p>
+		</div>
+		<p>Example:		</p>
 		<p class="xmlExample">&lt;unit
 			type=&quot;acceleration-g-force&quot;&gt;</p>
 		<p>​</p>
 		<p>
-			Examples of these include the following. The complete list is in the
+			Examples of these include but are not limited to the following. The units in CLDR are not comprehensive; it is anticipated that
+			more will be added over time. The complete list of supported units is in the
 			validity data: see <em>Section <a href="tr35.html#Validity_Data">3.11
 					Validity Data</a></em>.
 		</p>
@@ -1456,6 +1461,7 @@ h2, h3, h4, table {
 				<td><em>concentr</em></td>
 				<td>karat</td>
 				<td>{0} kt</td>
+				<td>dimensionless</td>
 			</tr>
 			<tr>
 				<td><em>concentr</em></td>
@@ -1471,6 +1477,19 @@ h2, h3, h4, table {
 				<td><em>concentr</em></td>
 				<td>part-per-million</td>
 				<td>{0} ppm</td>
+				<td>dimensionless</td>
+			</tr>
+			<tr>
+				<td><em>concentr</em></td>
+				<td>percent</td>
+				<td>{0}%</td>
+				<td>dimensionless</td>
+			</tr>
+			<tr>
+				<td><em>concentr</em></td>
+				<td>permille</td>
+				<td>{0}‰</td>
+				<td>dimensionless</td>
 			</tr>
 			<tr>
 				<td><em>consumption</em></td>
@@ -1491,6 +1510,11 @@ h2, h3, h4, table {
 				<td><em>consumption</em></td>
 				<td>mile-per-gallon-imperial</td>
 				<td>{0} mpg Imp.</td>
+			</tr>
+			<tr>
+				<td><em>digital</em></td>
+				<td>petabyte</td>
+				<td>{0} PB</td>
 			</tr>
 			<tr>
 				<td><em>digital</em></td>
@@ -1904,6 +1928,11 @@ h2, h3, h4, table {
 				<td>{0} mbar</td>
 			</tr>
 			<tr>
+				<td><em>pressure</em></td>
+				<td>atmosphere</td>
+				<td>{0} atm</td>
+			</tr>
+			<tr>
 				<td><em>speed</em></td>
 				<td>kilometer-per-hour</td>
 				<td>{0} km/h</td>
@@ -2197,13 +2226,15 @@ h2, h3, h4, table {
 		<p>
 			The <strong>coordinateUnitPattern</strong> is a special type of
 			pattern used for composing degrees of latitude and longitude, with an
-			indicator of the quadrant. There are exactly 4 type values. An angle
+			indicator of the quadrant. There are exactly 4 type values,
+			plus a displayName for the items in this category. An angle
 			is composed using the appropriate combination of the <strong>angle-degrees</strong>,
 			<strong>angle-arc-minute</strong> and <strong>angle-arc-second</strong>
 			values. It is then substituted for the placeholder field {0} in the
 			appropriate <strong>coordinateUnit</strong> pattern.
 		</p>
 		<p class="xmlExample">
+			&lt;displayName&gt;direction&lt;/displayName&gt;<br>
 			&lt;coordinateUnitPattern
 			type=&quot;east&quot;&gt;{0}E&lt;/coordinateUnitPattern&gt;<br>
 			&lt;coordinateUnitPattern
@@ -2899,8 +2930,8 @@ h2, h3, h4, table {
 			internal superset encoding for Indic scripts), then from Interindic
 			to Latin. This allows there to be only N sets of transform rules for
 			the Indic scripts: each one to and from Interindic. These pivots are
-			explicitly represented in the CLDR transforms.
-		</p>
+			explicitly represented in the CLDR transforms.</p>
+		<p>Note that the characters currently used by Interindic are private use characters. To prevent those from “leaking” out into text, transforms converting from Interindic must ensure that they convert all the possible values used in Interindic.</p>
 		<p>
 			The pivots can also be produced automatically (implicitly), as a
 			fallback. A particularly useful pivot is IPA, since that tends to

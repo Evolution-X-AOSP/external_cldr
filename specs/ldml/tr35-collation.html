@@ -94,7 +94,7 @@ h2, h3, h4, table {
 		<table border="1" cellpadding="2" cellspacing="0" class="wide">
 			<tr>
 				<td>Version</td>
-				<td>33</td>
+				<td>34</td>
 			</tr>
 			<tr>
 				<td>Editors</td>
@@ -1915,13 +1915,17 @@ FDD0 0065; [, B1, 09]       # [1644.0020.0004] [0000.0061.0004]     * U+A7A1 LAT
 			before the rules are parsed; this means that even escaped syntax and
 			white space characters need to be enclosed in apostrophes. For
 			example:
-			<code>&amp;'\u0020'='\u3000'</code>
+			<code>&amp;'\u0020'='\u3000'</code>.
+			Note: The unescaping is done by ICU tools (genrb) and demos before passing
+			rule strings into the ICU library code.
+			The ICU collation API does not unescape rule strings.
 		</p>
 
 		<p>
 			The ASCII double quote must be both escaped (so that the collation
 			syntax can be enclosed in pairs of double quotes in programming
-			environments) and quoted. For example:
+			environments such as ICU resource bundle .txt files)
+			and quoted. For example:
 			<code>&amp;'\u0022'&lt;&lt;&lt;x</code>
 		</p>
 
