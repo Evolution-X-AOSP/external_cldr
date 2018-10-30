@@ -76,6 +76,8 @@ import com.ibm.icu.util.ULocale;
  *
  */
 public class ExampleGenerator {
+    private static final CLDRConfig CONFIG = CLDRConfig.getInstance();
+
     private static final String ALT_STAND_ALONE = "[@alt=\"stand-alone\"]";
 
     private static final String EXEMPLAR_CITY_LOS_ANGELES = "//ldml/dates/timeZoneNames/zone[@type=\"America/Los_Angeles\"]/exemplarCity";
@@ -131,14 +133,14 @@ public class ExampleGenerator {
 
     static {
         Calendar calendar = Calendar.getInstance(ZONE_SAMPLE, ULocale.ENGLISH);
-        calendar.set(1999, 8, 5, 13, 25, 59); // 1999-08-14 13:25:59
+        calendar.set(1999, 8, 5, 13, 25, 59); // 1999-08-05 13:25:59
         DATE_SAMPLE = calendar.getTime();
         calendar.set(1999, 9, 27, 13, 25, 59); // 1999-09-27 13:25:59
         DATE_SAMPLE2 = calendar.getTime();
 
-        calendar.set(1999, 8, 5, 7, 0, 0); // 1999-08-14 07:00:00
+        calendar.set(1999, 8, 5, 7, 0, 0); // 1999-08-5 07:00:00
         DATE_SAMPLE3 = calendar.getTime();
-        calendar.set(1999, 8, 5, 23, 0, 0); // 1999-08-14 23:00:00
+        calendar.set(1999, 8, 5, 23, 0, 0); // 1999-08-5 23:00:00
         DATE_SAMPLE4 = calendar.getTime();
     }
 
@@ -1761,7 +1763,7 @@ public class ExampleGenerator {
                 continue;
             }
 
-            Factory factory = Factory.make(CLDRPaths.MAIN_DIRECTORY, ".*");
+            Factory factory = CONFIG.getCldrFactory();
             CLDRFileTransformer transformer = new CLDRFileTransformer(factory, CLDRPaths.COMMON_DIRECTORY + "transforms/");
             Transliterator transliterator = transformer.loadTransliterator(localeTransform);
             final String transliterated = transliterator.transliterate(value);
@@ -1903,7 +1905,7 @@ public class ExampleGenerator {
 
         // now get the description
 
-        Level level = CLDRConfig.getInstance().getCoverageInfo().getCoverageLevel(xpath, cldrFile.getLocaleID());
+        Level level = CONFIG.getCoverageInfo().getCoverageLevel(xpath, cldrFile.getLocaleID());
         String description = pathDescription.getDescription(xpath, value, level, null);
         if (description == null || description.equals("SKIP")) {
             return null;
