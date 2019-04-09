@@ -3989,6 +3989,7 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 						<era type="233" draft="contributed">大正</era>
 						<era type="234" draft="contributed">昭和</era>
 						<era type="235" draft="contributed">平成</era>
+						<era type="236" draft="contributed">令和</era>
 					</eraNames>
 					<eraAbbr>
 						<era type="0">大化 (645–650)</era>
@@ -4227,6 +4228,7 @@ Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/
 						<era type="233">大正</era>
 						<era type="234">昭和</era>
 						<era type="235">平成</era>
+						<era type="236">令和</era>
 					</eraAbbr>
 					<eraNarrow>
 						<era type="0">大化(645–650)</era>
