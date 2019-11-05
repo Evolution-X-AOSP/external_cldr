@@ -7,7 +7,7 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 -->
 <ldml>
 	<identity>
-		<version number="$Revision: 14936 $"/>
+		<version number="$Revision$"/>
 		<language type="ar"/>
 		<territory type="JO"/>
 	</identity>
@@ -110,12 +110,12 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 	<numbers>
 		<defaultNumberingSystem>arab</defaultNumberingSystem>
 		<symbols numberSystem="arab">
-			<decimal draft="contributed">٫</decimal>
-			<group draft="contributed">٬</group>
+			<decimal draft="contributed">↑↑↑</decimal>
+			<group draft="contributed">↑↑↑</group>
 		</symbols>
 		<symbols numberSystem="latn">
-			<decimal draft="contributed">.</decimal>
-			<group draft="contributed">,</group>
+			<decimal draft="contributed">↑↑↑</decimal>
+			<group draft="contributed">↑↑↑</group>
 		</symbols>
 	</numbers>
 </ldml>
