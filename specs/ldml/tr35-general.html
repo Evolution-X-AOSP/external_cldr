@@ -89,7 +89,7 @@
     <table border="1" cellpadding="2" cellspacing="0" class="wide">
       <tr>
         <td>Version</td>
-        <td>35</td>
+        <td>36</td>
       </tr>
       <tr>
         <td>Editors</td>
@@ -113,7 +113,7 @@
     and the links above.</p>
     <h3><i>Status</i></h3>
 
-    <!-- NOT YET APPROVED 
+    <!-- NOT YET APPROVED
                 <p>
                                 <i class="changed">This is a<b><font color="#ff3333">
                                 draft </font></b>document which may be updated, replaced, or superseded by
@@ -3640,9 +3640,14 @@
       </tr>
       <tr>
         <td>standard-short</td>
-        <td>A short version of a 'and' list, suitable for use with
+        <td>A short version of an 'and' list, suitable for use with
         short or abbreviated placeholder values</td>
         <td><em>Jan., Feb., and Mar.</em></td>
+      </tr>
+      <tr>
+        <td>standard-narrow</td>
+        <td>A yet shorter version of a short 'and' list (where possible)</td>
+        <td><em>Jan., Feb.,  Mar.</em></td>
       </tr>
       <tr>
         <td>or</td>
@@ -3654,7 +3659,12 @@
         <td>A short version of an 'or' list</td>
         <td><em>Jan., Feb., or Mar.</em></td>
       </tr>
-      <tr>
+       <tr>
+        <td>or-narrow</td>
+        <td>A yet shorter version of a short 'or' list (where possible)</td>
+        <td><em>Jan., Feb.,  or Mar.</em></td>
+      </tr>
+     <tr>
         <td>unit</td>
         <td>A list suitable for wide units</td>
         <td><em>3 feet, 7 inches</em></td>
@@ -4085,8 +4095,7 @@
       <li>If <strong>sequence</strong> contains any emoji
       modifiers, move them (in order) into <strong>suffix</strong>,
       removing them from <strong>sequence</strong>.</li>
-      <li>If <strong>sequence</strong> is a "KISS", "HEART" or
-      "FAMILY" emoji ZWJ sequence, move the characters in <strong>
+      <li>If <strong>sequence</strong> is a "KISS", "HEART",      "FAMILY",  or &quot;HOLDING HANDS&quot; emoji ZWJ sequence, move the characters in <strong>
         sequence</strong> to the front of <strong>suffix</strong>,
         and set the <strong>sequence</strong> to be "💏", "💑", or
         "👪" respectively, and go to step 7.
@@ -4095,6 +4104,7 @@
           skipped in moving to <strong>suffix</strong>.</li>
           <li>A HEART sequence contains ZWJ and "❤", which are
           skipped in moving to <strong>suffix</strong>.</li>
+          <li>A HOLDING HANDS sequence contains ZWJ+🤝+ZWJ, which are skipped in moving to <strong>suffix</strong>.</li>
           <li>A FAMILY sequence contains only characters from the
           set {👦, 👧, 👨, 👩, 👴, 👵, 👶}. Nothing is skipped in moving
           to <strong>suffix</strong>, except ZWJ.</li>
