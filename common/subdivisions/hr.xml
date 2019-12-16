@@ -7,7 +7,7 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 -->
 <ldml>
 	<identity>
-		<version number="$Revision: 14896 $"/>
+		<version number="$Revision$"/>
 		<language type="hr"/>
 	</identity>
 	<localeDisplayNames>
@@ -506,7 +506,6 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="gbeay" draft="contributed">Istočni Ayrshire</subdivision>
 			<subdivision type="gbedh" draft="contributed">Edinburgh</subdivision>
 			<subdivision type="gbels" draft="contributed">Vanjski Hebridi</subdivision>
-			<subdivision type="gbeng">Engleska</subdivision>
 			<subdivision type="gbgbn" draft="contributed">Velika Britanija</subdivision>
 			<subdivision type="gbglg" draft="contributed">Glasgow</subdivision>
 			<subdivision type="gbgwn" draft="contributed">Gwynedd</subdivision>
@@ -530,14 +529,12 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="gbply" draft="contributed">Plymouth</subdivision>
 			<subdivision type="gbpor" draft="contributed">Portsmouth</subdivision>
 			<subdivision type="gbsay" draft="contributed">Južni Ayrshire</subdivision>
-			<subdivision type="gbsct">Škotska</subdivision>
 			<subdivision type="gbsfk" draft="contributed">Suffolk</subdivision>
 			<subdivision type="gbshf" draft="contributed">Sheffield</subdivision>
 			<subdivision type="gbslk" draft="contributed">Južni Lanarkshire</subdivision>
 			<subdivision type="gbsth" draft="contributed">Southampton</subdivision>
 			<subdivision type="gbswa" draft="contributed">Swansea</subdivision>
 			<subdivision type="gbukm" draft="contributed">Ujedinjeno Kraljevstvo</subdivision>
-			<subdivision type="gbwls">Wales</subdivision>
 			<subdivision type="gbwsx" draft="contributed">Zapadni Sussex</subdivision>
 			<subdivision type="gbyor" draft="contributed">York</subdivision>
 			<subdivision type="gbzet" draft="contributed">Shetlandsko otočje</subdivision>
@@ -1394,10 +1391,10 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="sbrb" draft="contributed">Rennell i Bellona</subdivision>
 			<subdivision type="sbte" draft="contributed">Temotu (provincija)</subdivision>
 			<subdivision type="sbwe" draft="contributed">Zapadna provincija</subdivision>
-			<subdivision type="seab" draft="contributed">Stockholms län</subdivision>
+			<subdivision type="seab" draft="contributed">Županija Stockholm</subdivision>
 			<subdivision type="seac" draft="contributed">Županija Västerbotten</subdivision>
 			<subdivision type="sebd" draft="contributed">Županija Norrbotten</subdivision>
-			<subdivision type="sec" draft="contributed">Uppsala län</subdivision>
+			<subdivision type="sec" draft="contributed">Županija Uppsala</subdivision>
 			<subdivision type="sed" draft="contributed">Županija Södermanland</subdivision>
 			<subdivision type="see" draft="contributed">Županija Östergötland</subdivision>
 			<subdivision type="sef" draft="contributed">Županija Jönköping</subdivision>
@@ -1408,7 +1405,7 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="sem" draft="contributed">Županija Skåne</subdivision>
 			<subdivision type="sen" draft="contributed">Županija Halland</subdivision>
 			<subdivision type="seo" draft="contributed">Županija Västra Götaland</subdivision>
-			<subdivision type="ses" draft="contributed">Värmlands län</subdivision>
+			<subdivision type="ses" draft="contributed">Županija Värmland</subdivision>
 			<subdivision type="set" draft="contributed">Županija Örebro</subdivision>
 			<subdivision type="seu" draft="contributed">Županija Västmanland</subdivision>
 			<subdivision type="sew" draft="contributed">Županija Dalarna</subdivision>
