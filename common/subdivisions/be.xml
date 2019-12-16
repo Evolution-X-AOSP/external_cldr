@@ -7,7 +7,7 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 -->
 <ldml>
 	<identity>
-		<version number="$Revision: 14896 $"/>
+		<version number="$Revision$"/>
 		<language type="be"/>
 	</identity>
 	<localeDisplayNames>
@@ -832,7 +832,6 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="gbeln" draft="contributed">Усходні Лотыян</subdivision>
 			<subdivision type="gbels" draft="contributed">Знешнія Гебрыдскія астравы</subdivision>
 			<subdivision type="gbenf" draft="contributed">Энфілд</subdivision>
-			<subdivision type="gbeng">Англія</subdivision>
 			<subdivision type="gbery" draft="contributed">Усходні райдынг Ёркшыра</subdivision>
 			<subdivision type="gbess" draft="contributed">Эсэкс</subdivision>
 			<subdivision type="gbesx" draft="contributed">Усходні Сусекс</subdivision>
@@ -903,7 +902,6 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="gbric" draft="contributed">Рычманд-апан-Тэмс</subdivision>
 			<subdivision type="gbsay" draft="contributed">Паўднёвы Эйршыр</subdivision>
 			<subdivision type="gbscb" draft="contributed">Скотыш-Бордэрс</subdivision>
-			<subdivision type="gbsct">Шатландыя</subdivision>
 			<subdivision type="gbsfk" draft="contributed">графства Суфалк</subdivision>
 			<subdivision type="gbsft" draft="contributed">Сефтан</subdivision>
 			<subdivision type="gbsgc" draft="contributed">Паўднёвы Глостэршыр</subdivision>
@@ -934,7 +932,6 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="gbwil" draft="contributed">Уілтшыр</subdivision>
 			<subdivision type="gbwkf" draft="contributed">Уэйкфілд</subdivision>
 			<subdivision type="gbwln" draft="contributed">Заходні Лотыян</subdivision>
-			<subdivision type="gbwls">Уэльс</subdivision>
 			<subdivision type="gbwlv" draft="contributed">Горад Вулверхэмптан</subdivision>
 			<subdivision type="gbwnd" draft="contributed">Уондсуэрт</subdivision>
 			<subdivision type="gbwnm" draft="contributed">Віндзар і Мэйдэнхэд</subdivision>
@@ -2052,26 +2049,26 @@ CLDR data files are interpreted according to the LDML specification (http://unic
 			<subdivision type="sc12" draft="contributed">Гласіс</subdivision>
 			<subdivision type="sdkh" draft="contributed">Хартум</subdivision>
 			<subdivision type="seab" draft="contributed">лен Стакгольм</subdivision>
-			<subdivision type="seac" draft="contributed">Лен Вестэрботэн</subdivision>
-			<subdivision type="sebd" draft="contributed">Лен Норботэн</subdivision>
+			<subdivision type="seac" draft="contributed">лен Вестэрботэн</subdivision>
+			<subdivision type="sebd" draft="contributed">лен Норботэн</subdivision>
 			<subdivision type="sec" draft="contributed">лен Упсала</subdivision>
 			<subdivision type="sed" draft="contributed">лен Сёдэрманланд</subdivision>
 			<subdivision type="see" draft="contributed">лен Эстэргётланд</subdivision>
 			<subdivision type="sef" draft="contributed">лен Ёнчэпінг</subdivision>
-			<subdivision type="seg" draft="contributed">Лен Крунуберг</subdivision>
-			<subdivision type="seh" draft="contributed">Лен Кальмар</subdivision>
-			<subdivision type="sei" draft="contributed">Лен Готланд</subdivision>
-			<subdivision type="sek" draft="contributed">Блекінгэ</subdivision>
-			<subdivision type="sem" draft="contributed">Лен Сконэ</subdivision>
+			<subdivision type="seg" draft="contributed">лен Крунуберг</subdivision>
+			<subdivision type="seh" draft="contributed">лен Кальмар</subdivision>
+			<subdivision type="sei" draft="contributed">лен Готланд</subdivision>
+			<subdivision type="sek" draft="contributed">лен Блекінгэ</subdivision>
+			<subdivision type="sem" draft="contributed">лен Сконэ</subdivision>
 			<subdivision type="sen" draft="contributed">лен Халанд</subdivision>
 			<subdivision type="seo" draft="contributed">лен Вестра-Гёталанд</subdivision>
 			<subdivision type="ses" draft="contributed">лен Вермланд</subdivision>
-			<subdivision type="set" draft="contributed">Лен Эрэбру</subdivision>
-			<subdivision type="seu" draft="contributed">Лен Вестманланд</subdivision>
-			<subdivision type="sew" draft="contributed">Лен Даларна</subdivision>
+			<subdivision type="set" draft="contributed">лен Эрэбру</subdivision>
+			<subdivision type="seu" draft="contributed">лен Вестманланд</subdivision>
+			<subdivision type="sew" draft="contributed">лен Даларна</subdivision>
 			<subdivision type="sex" draft="contributed">лен Еўлебарг</subdivision>
-			<subdivision type="sey" draft="contributed">Лен Вестэрнорланд</subdivision>
-			<subdivision type="sez" draft="contributed">Лен Емтланд</subdivision>
+			<subdivision type="sey" draft="contributed">лен Вестэрнорланд</subdivision>
+			<subdivision type="sez" draft="contributed">лен Емтланд</subdivision>
 			<subdivision type="shac" draft="contributed">Востраў Ушэсця</subdivision>
 			<subdivision type="shhl" draft="contributed">Востраў Святой Алены</subdivision>
 			<subdivision type="si011" draft="contributed">Цэле</subdivision>
