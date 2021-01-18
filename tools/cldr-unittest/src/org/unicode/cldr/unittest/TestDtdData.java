@@ -30,10 +30,10 @@ import org.unicode.cldr.util.Validity.Status;
 import org.unicode.cldr.util.XMLFileReader;
 import org.unicode.cldr.util.XPathParts;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.TreeMultimap;
 import com.ibm.icu.dev.test.TestFmwk;
-import com.ibm.icu.dev.util.CollectionUtilities;
 
 public class TestDtdData extends TestFmwk {
     private static final String COMMON_DIR = CLDRPaths.BASE_DIRECTORY + "common/";
@@ -50,7 +50,7 @@ public class TestDtdData extends TestFmwk {
 
             /*
              * TODO: re-enable the first test or something like it.
-             * It began to fail as a result of copying dtdData in XPathParts.cloneAsThawed rather than always making it null. 
+             * It began to fail as a result of copying dtdData in XPathParts.cloneAsThawed rather than always making it null.
              * Reference: https://unicode.org/cldr/trac/ticket/12007
              */
             // has a value & value attribute
@@ -130,7 +130,7 @@ public class TestDtdData extends TestFmwk {
                     actual.add(item + "==VALUE");
                 }
             }
-            TreeSet<String> temp = new TreeSet<String>(actual);
+            TreeSet<String> temp = new TreeSet<>(actual);
             temp.removeAll(expected);
             assertEquals("too many, extra:  " + path, Collections.emptySet(), temp);
             temp.clear();
@@ -176,7 +176,7 @@ public class TestDtdData extends TestFmwk {
             DtdData dtdData = DtdData.getInstance(type);
             Element special = dtdData.getElementFromName().get("special");
             checkEmpty(m, type, dtdData.ROOT, special, new HashSet<Element>(),
-                new ArrayList<Element>(Arrays.asList(dtdData.ROOT)));
+                new ArrayList<>(Arrays.asList(dtdData.ROOT)));
         }
         Collection<String> items = m.get("error");
         if (items != null) {
@@ -195,9 +195,9 @@ public class TestDtdData extends TestFmwk {
     }
 
     /** make sure that if the final element is empty, there is a value attribute required somewhere in the path
-     * @param m 
-     * @param type 
-     * @param seen 
+     * @param m
+     * @param type
+     * @param seen
      */
     private void checkEmpty(Multimap<String, String> m, DtdType type, Element element, Element special, HashSet<Element> seen,
         List<Element> parents) {
@@ -284,7 +284,7 @@ public class TestDtdData extends TestFmwk {
     }
 
     private String showPath(List<Element> parents) {
-        return "!//" + CollectionUtilities.join(parents, "/");
+        return "!//" + Joiner.on("/").join(parents);
     }
 
     public void TestNewDtdData() {
@@ -339,17 +339,17 @@ public class TestDtdData extends TestFmwk {
 //                        continue;
 //                    }
 //                    switch (attribute.getStatus()) {
-//                    case value: 
+//                    case value:
 //                        errln(type + "\t" + element + "\t" + attribute + "\t");
 //                    }
 //                }
 //            }
 //        }
-//        
+//
 //    }
 
     // TESTING CODE
-    static final Set<String> orderedElements = Collections.unmodifiableSet(new HashSet<String>(Arrays
+    static final Set<String> orderedElements = Collections.unmodifiableSet(new HashSet<>(Arrays
         .asList(
             // can prettyprint with TestAttributes
 
@@ -462,7 +462,14 @@ public class TestDtdData extends TestFmwk {
                 || (elementName.equals("parseLenients") && (attribute.equals("scope") || attribute.equals("level")))
                 || (elementName.equals("parseLenient") && attribute.equals("sample"))
                 || (elementName.equals("ordinalMinimalPairs") && attribute.equals("ordinal"))
-                || (elementName.equals("styleName") && attribute.equals("subtype"));
+                || (elementName.equals("styleName") && attribute.equals("subtype"))
+                || (elementName.equals("unitPattern") && attribute.equals("case"))
+                || (elementName.equals("compoundUnitPattern") && attribute.equals("case"))
+                || (elementName.equals("compoundUnitPattern1") && (attribute.equals("case") || attribute.equals("gender")))
+                || (elementName.equals("genderMinimalPairs") && attribute.equals("gender"))
+                || (elementName.equals("caseMinimalPairs") && attribute.equals("case"))
+                ;
+
         case ldmlBCP47:
             return attribute.equals("_q")
                 //|| attribute.equals("alias")
@@ -570,9 +577,17 @@ public class TestDtdData extends TestFmwk {
                 || (elementName.equals("transform") && (attribute.equals("source") || attribute.equals("target") || attribute.equals("direction") || attribute
                     .equals("variant")))
                 || (elementName.equals("grammaticalFeatures") && (attribute.equals("locales") || attribute.equals("targets")))
+                || (elementName.equals("grammaticalDefiniteness") && attribute.equals("scope"))
+                || (elementName.equals("grammaticalCase") && attribute.equals("scope"))
+                || (elementName.equals("grammaticalGender") && attribute.equals("scope"))
                 || (elementName.equals("convertUnit") && (attribute.equals("source") || attribute.equals("target")))
                 || (elementName.equals("unitConstant") && attribute.equals("constant"))
                 || (elementName.equals("unitQuantity") && attribute.equals("baseUnit"))
+
+                || attribute.equals("scope")
+                || elementName.equals("deriveComponent") && (attribute.equals("feature") || attribute.equals("structure"))
+                || elementName.equals("grammaticalDerivations") && attribute.equals("locales")
+                || elementName.equals("deriveCompound") && (attribute.equals("feature")|| attribute.equals("structure"))
                 ;
 
         case keyboard:
@@ -642,7 +657,7 @@ public class TestDtdData extends TestFmwk {
             final String inputText = (String)test[1];
             int startOfValues = test[2] instanceof String ? 3 : 2;
             String expectedFormat = startOfValues == 3 ? (String) test[2] : inputText;
-            Set<Enum> expected = new TreeSet<Enum>();
+            Set<Enum> expected = new TreeSet<>();
             for (Object item : Arrays.asList(test).subList(startOfValues, test.length)) {
                 expected.add((Enum)item);
             }
@@ -664,7 +679,7 @@ public class TestDtdData extends TestFmwk {
             MatchValue matcher = MatchValue.of((String)test[0]);
             final String toMatch = (String)test[1];
             boolean expectedValue = test.length < 3 ? true : Boolean.valueOf((String)test[2]);
-            
+
             final boolean actual = matcher.is(toMatch);
             assertEquals(Arrays.asList(test).toString(), expectedValue, actual);
         }

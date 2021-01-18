@@ -43,7 +43,6 @@ import com.google.common.base.CharMatcher;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
-import com.ibm.icu.dev.util.CollectionUtilities;
 import com.ibm.icu.impl.Relation;
 import com.ibm.icu.impl.Row;
 import com.ibm.icu.impl.Row.R2;
@@ -543,6 +542,9 @@ public class TestLocale extends TestFmwkPlus {
             case "tz": 
                 showName(cldrFile, seen, localeBase, "uslax", "gblon", "chzrh");
                 continue keyLoop;
+            case "dx": 
+                // skip for now, probably need to fix something in CLDRFile
+                continue keyLoop;
             }
             for (String value : keyValues.getValue()) {
                 if ("true".equals(deprecatedMap.get(Row.of(key, value)))) {
@@ -707,6 +709,9 @@ public class TestLocale extends TestFmwkPlus {
         case "REORDER_CODE":    // [u, kr, REORDER_CODE] 
             valuesSet = ImmutableSet.of("arab", "digit-deva-latn");
             break;
+        case "SCRIPT_CODE":    // [u, dx, SCRIPT_CODE] 
+            valuesSet = ImmutableSet.of("thai", "thai-laoo");
+            break;
         case "RG_KEY_VALUE":    // [u, rg, RG_KEY_VALUE]
             valuesSet = ImmutableSet.of("ustx", "gbeng");
             break;
@@ -726,7 +731,7 @@ public class TestLocale extends TestFmwkPlus {
     private void showItem(LanguageTagParser ltp, String extension, String key, String gorp, String... values) {
 
         String locale = "en-GB-" + extension + (extension.equals("t") ? "-hi" : "")
-            + "-" + key + "-" + CollectionUtilities.join(values, "-") + gorp;
+            + "-" + key + "-" + String.join("-", values) + gorp;
         ltp.set(locale);
 
         logln(ltp.toString(Format.bcp47) 
