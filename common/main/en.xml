@@ -3261,9 +3261,6 @@ annotations.
 			<zone type="America/St_Barthelemy">
 				<exemplarCity>St. Barthélemy</exemplarCity>
 			</zone>
-			<zone type="Asia/Qostanay">
-				<exemplarCity>Kostanay</exemplarCity>
-			</zone>
 			<zone type="America/Curacao">
 				<exemplarCity>Curaçao</exemplarCity>
 			</zone>
