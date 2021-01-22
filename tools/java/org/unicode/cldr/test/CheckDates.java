@@ -43,7 +43,7 @@ import org.unicode.cldr.util.SupplementalDataInfo;
 import org.unicode.cldr.util.XPathParts;
 import org.unicode.cldr.util.props.UnicodeProperty.PatternMatcher;
 
-import com.ibm.icu.dev.util.CollectionUtilities;
+import com.google.common.base.Joiner;
 import com.ibm.icu.impl.Relation;
 import com.ibm.icu.text.BreakIterator;
 import com.ibm.icu.text.DateTimePatternGenerator;
@@ -222,6 +222,9 @@ public class CheckDates extends FactoryCheckCLDR {
             // possibleErrors.add(flexInfo.getFailurePath(path));
         }
         redundants.clear();
+        /*
+         * TODO: NullPointerException may be thrown in ICU here during cldr-unittest TestAll
+         */
         flexInfo.getRedundants(redundants);
         // Set baseSkeletons = flexInfo.gen.getBaseSkeletons(new TreeSet());
         // Set notCovered = new TreeSet(neededFormats);
@@ -276,7 +279,7 @@ public class CheckDates extends FactoryCheckCLDR {
      */
     BreakIterator bi;
     FlexibleDateFromCLDR flexInfo;
-    Collection<String> redundants = new HashSet<String>();
+    Collection<String> redundants = new HashSet<>();
     Status status = new Status();
     PathStarrer pathStarrer = new PathStarrer();
 
@@ -293,6 +296,7 @@ public class CheckDates extends FactoryCheckCLDR {
         return s;
     }
 
+    @Override
     public CheckCLDR handleCheck(String path, String fullPath, String value, Options options,
         List<CheckStatus> result) {
 
@@ -439,7 +443,7 @@ public class CheckDates extends FactoryCheckCLDR {
                 boolean endsWithDisplayName = path.endsWith("displayName"); // special hack, these shouldn't be in
                 // calendar.
 
-                Set<String> retrievedPaths = new HashSet<String>();
+                Set<String> retrievedPaths = new HashSet<>();
                 getResolvedCldrFileToCheck().getPathsWithValue(value, calendarPrefix, null, retrievedPaths);
                 if (retrievedPaths.size() < 2) {
                     break main;
@@ -458,7 +462,7 @@ public class CheckDates extends FactoryCheckCLDR {
 
                 // TODO redo above and below in terms of parts instead of searching strings
 
-                Set<String> filteredPaths = new HashSet<String>();
+                Set<String> filteredPaths = new HashSet<>();
                 Output<Integer> sampleError = new Output<>();
 
                 for (String item : retrievedPaths) {
@@ -491,7 +495,7 @@ public class CheckDates extends FactoryCheckCLDR {
                 if (filteredPaths.size() == 0) {
                     break main;
                 }
-                Set<String> others = new TreeSet<String>();
+                Set<String> others = new TreeSet<>();
                 for (String path2 : filteredPaths) {
                     PathHeader pathHeader = getPathHeaderFactory().fromPath(path2);
                     others.add(pathHeader.getHeaderCode());
@@ -567,7 +571,8 @@ public class CheckDates extends FactoryCheckCLDR {
         } catch (Exception e) {
             // e.printStackTrace();
             // HACK
-            if (!HACK_CONFLICTING.matcher(e.getMessage()).find()) {
+            String msg = e.getMessage();
+            if (msg == null || !HACK_CONFLICTING.matcher(msg).find()) {
                 CheckStatus item = new CheckStatus().setCause(this).setMainType(CheckStatus.errorType)
                     .setSubtype(Subtype.illegalDatePattern)
                     .setMessage("Error in creating date format {0}", new Object[] { e });
@@ -651,18 +656,19 @@ public class CheckDates extends FactoryCheckCLDR {
     }
 
     private String getValues(CLDRFile resolvedCldrFileToCheck, Collection<String> values) {
-        Set<String> results = new TreeSet<String>();
+        Set<String> results = new TreeSet<>();
         for (String path : values) {
             final String stringValue = resolvedCldrFileToCheck.getStringValue(path);
             if (stringValue != null) {
                 results.add(stringValue);
             }
         }
-        return "{" + CollectionUtilities.join(results, "},{") + "}";
+        return "{" + Joiner.on("},{").join(results) + "}";
     }
 
     static final Pattern HACK_CONFLICTING = PatternCache.get("Conflicting fields:\\s+M+,\\s+l");
 
+    @Override
     public CheckCLDR handleGetExamples(String path, String fullPath, String value, Options options, List<CheckStatus> result) {
         if (path.indexOf("/dates") < 0 || path.indexOf("gregorian") < 0) return this;
         try {
@@ -845,7 +851,7 @@ public class CheckDates extends FactoryCheckCLDR {
         date, time, dateTime
     }
 
-    static final Map<DateOrTime, Relation<DateTimeLengths, String>> STOCK_PATTERNS = new EnumMap<DateOrTime, Relation<DateTimeLengths, String>>(
+    static final Map<DateOrTime, Relation<DateTimeLengths, String>> STOCK_PATTERNS = new EnumMap<>(
         DateOrTime.class);
 
     //
@@ -927,7 +933,7 @@ public class CheckDates extends FactoryCheckCLDR {
             int countMismatches = 0;
             boolean errorOnMissing = false;
             String timezonePattern = null;
-            Set<String> bases = new LinkedHashSet<String>();
+            Set<String> bases = new LinkedHashSet<>();
             for (String key : keys) {
                 int star = key.indexOf('*');
                 boolean hasStar = star >= 0;
@@ -977,7 +983,7 @@ public class CheckDates extends FactoryCheckCLDR {
                     result.add(new CheckStatus().setCause(this).setMainType(CheckStatus.warningType)
                         .setSubtype(Subtype.missingDatePattern)
                         .setMessage(msg,
-                            dateTimeLength, dateOrTime, value, CollectionUtilities.join(bases, ", ")));
+                            dateTimeLength, dateOrTime, value, Joiner.on(", ").join(bases)));
                 }
             }
         }
@@ -1000,7 +1006,7 @@ public class CheckDates extends FactoryCheckCLDR {
             return false;
         }
 
-        List<Object> items1 = new ArrayList<Object>(formatParser.set(value1).getItems()); // clone
+        List<Object> items1 = new ArrayList<>(formatParser.set(value1).getItems()); // clone
         List<Object> items2 = formatParser.set(value2).getItems();
         if (items1.size() != items2.size()) {
             return false;
@@ -1022,7 +1028,7 @@ public class CheckDates extends FactoryCheckCLDR {
         return true;
     }
 
-    static final Set<String> YgLanguages = new HashSet<String>(Arrays.asList(
+    static final Set<String> YgLanguages = new HashSet<>(Arrays.asList(
         "ar", "cs", "da", "de", "en", "es", "fa", "fi", "fr", "he", "hr", "id", "it", "nb", "nl", "pt", "ru", "sv", "tr"));
 
     private GyState getExpectedGy(String localeID) {
@@ -1056,7 +1062,7 @@ public class CheckDates extends FactoryCheckCLDR {
 
     enum DateTimeLengths {
         SHORT, MEDIUM, LONG, FULL
-    };
+    }
 
     // The patterns below should only use the *canonical* characters for each field type:
     // y (not Y, u, U)
@@ -1125,6 +1131,7 @@ public class CheckDates extends FactoryCheckCLDR {
             return this;
         }
 
+        @Override
         public SimpleDemo getDemo() {
             return new MyDemo().setFormat(df);
         }
@@ -1133,10 +1140,12 @@ public class CheckDates extends FactoryCheckCLDR {
     static class MyDemo extends FormatDemo {
         private SimpleDateFormat df;
 
+        @Override
         protected String getPattern() {
             return df.toPattern();
         }
 
+        @Override
         protected String getSampleInput() {
             return neutralFormat.format(ExampleGenerator.DATE_SAMPLE);
         }
@@ -1146,6 +1155,7 @@ public class CheckDates extends FactoryCheckCLDR {
             return this;
         }
 
+        @Override
         protected void getArguments(Map<String, String> inout) {
             currentPattern = currentInput = currentFormatted = currentReparsed = "?";
             Date d;
@@ -1160,7 +1170,7 @@ public class CheckDates extends FactoryCheckCLDR {
                 return;
             }
             try {
-                currentInput = (String) inout.get("input");
+                currentInput = inout.get("input");
                 if (currentInput == null) {
                     currentInput = getSampleInput();
                 }
