@@ -34,7 +34,8 @@
 
 	<modules>
 		<module>cldr-code</module>
-		<module>cldr-apps</module>
+                <!-- Android patch: AOSP doesn't check out cldr-apps.
+                <module>cldr-apps</module> -->
 		<module>cldr-rdf</module>
 	</modules>
 
