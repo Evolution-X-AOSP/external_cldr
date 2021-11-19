@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
 
+import org.unicode.cldr.draft.ScriptMetadata;
 import org.unicode.cldr.test.CoverageLevel2;
 import org.unicode.cldr.util.CLDRConfig;
 import org.unicode.cldr.util.CLDRFile;
@@ -77,6 +78,26 @@ public class TestCoverageLevel extends TestFmwkPlus {
         Factory phf = PathHeader.getFactory(ENGLISH);
         CoverageLevel2 coverageLevel = CoverageLevel2.getInstance(SDI, "fr");
         CLDRLocale loc = CLDRLocale.getInstance("fr");
+        for (String[] row : rows) {
+            String path = row[0];
+            Level expectedLevel = Level.fromString(row[1]);
+            Level level = coverageLevel.getLevel(path);
+            assertEquals("Level for " + path, expectedLevel, level);
+
+            int expectedRequiredVotes = Integer.parseInt(row[2]);
+            int votes = SDI.getRequiredVotes(loc, phf.fromPath(path));
+            assertEquals("Votes for " + path, expectedRequiredVotes, votes);
+        }
+    }
+
+    public void testSpecificPathsPersCal() {
+        String[][] rows = {
+            { "//ldml/dates/calendars/calendar[@type=\"persian\"]/eras/eraAbbr/era[@type=\"0\"]", "basic", "4" },
+            { "//ldml/dates/calendars/calendar[@type=\"persian\"]/months/monthContext[@type=\"format\"]/monthWidth[@type=\"wide\"]/month[@type=\"1\"]", "basic", "4" }
+        };
+        Factory phf = PathHeader.getFactory(ENGLISH);
+        CoverageLevel2 coverageLevel = CoverageLevel2.getInstance(SDI, "ckb_IR");
+        CLDRLocale loc = CLDRLocale.getInstance("ckb_IR");
         for (String[] row : rows) {
             String path = row[0];
             Level expectedLevel = Level.fromString(row[1]);
@@ -338,7 +359,7 @@ public class TestCoverageLevel extends TestFmwkPlus {
          */
         final ImmutableSet<String> inactiveMetazones = ImmutableSet.of("Bering", "Dominican", "Shevchenko", "Alaska_Hawaii", "Yerevan",
             "Africa_FarWestern", "British", "Sverdlovsk", "Karachi", "Malaya", "Oral", "Frunze", "Dutch_Guiana", "Irish", "Uralsk", "Tashkent", "Kwajalein",
-            "Yukon", "Ashkhabad", "Kizilorda", "Kuybyshev", "Baku", "Dushanbe", "Goose_Bay", "Liberia", "Samarkand", "Tbilisi", "Borneo", "Greenland_Central",
+            "Ashkhabad", "Kizilorda", "Kuybyshev", "Baku", "Dushanbe", "Goose_Bay", "Liberia", "Samarkand", "Tbilisi", "Borneo", "Greenland_Central",
             "Dacca", "Aktyubinsk", "Turkey", "Urumqi", "Acre", "Almaty", "Anadyr", "Aqtau", "Aqtobe", "Kamchatka", "Macau", "Qyzylorda", "Samara",
             "Casey", "Guam", "Lanka", "North_Mariana");
 
@@ -364,7 +385,7 @@ public class TestCoverageLevel extends TestFmwkPlus {
             + "qug|"
             + "raj|rgn|rif|rom|rtm|ru[eg]|"
             + "sa[msz]|sbp|sd[ch]|se[eil]|sg[as]|shu?|sid|sl[iy]|sog|srr|stq|su[sx]|syc|szl|"
-            + "tcy|ter|tiv|tk[lr]|tl[iy]?|tmh|tog|tru|ts[di]|ttt|tw|"
+            + "tcy|ter|tiv|tk[lr]|tl[iy]?|tmh|tog|tpi|tru|ts[di]|ttt|tw|"
             + "uga|"
             + "ve[cp]|vls|vmf||vot|vro|"
             + "was|wbp|wuu|"
@@ -380,19 +401,11 @@ public class TestCoverageLevel extends TestFmwkPlus {
             + "dgr|mak|inh|lun|ts|fj|na|kpe|sr_ME|trv|rap|bug|ban|xal|oc|alt|nia|myv|ain|rar|krl|ay|"
             + "syr|kv|umb|cu|prg|vo)");
 
-        final Pattern script100 = PatternCache.get("("
-            + "Adlm|Afak|Aghb|Ahom|Aran|Armi|Avst|Bali|Bamu|Bass|Batk|Bhks|Blis|Brah|Bugi|Buhd|"
-            + "Cakm|Cans|Cari|Cham|Chrs|Cher|Cirt|Copt|Cprt|Cyrs|"
-            + "Diak|Dogr|Dsrt|Dupl|Egy[dhp]|Elba|Elym|Geok|Glag|Gong|Gonm|Goth|Gran|"
-            + "Hatr|Hanb|Hano|Hluw|Hmng|Hmnp|Hrkt|Hung|Inds|Ital|Jamo|Java|Jurc|"
-            + "Kali|Khar|Khoj|Kits|Kpel|Kthi|Lana|Lat[fg]|Lepc|Limb|Lin[ab]|Lisu|Loma|Ly[cd]i|"
-            + "Mahj|Maka|Man[di]|Marc|Maya|Medf|Mend|Mer[co]|Modi|Moon|Mroo|Mtei|Mult|"
-            + "Nand|Narb|Nbat|Newa|Nkgb|Nkoo|Nshu|Ogam|Olck|Orkh|Osge|Osma|"
-            + "Palm|Pauc|Perm|Phag|Phl[ipv]|Phnx|Plrd|Prti|"
-            + "Rjng|Rohg|Roro|Runr|"
-            + "Samr|Sar[ab]|Saur|Sgnw|Shaw|Shrd|Sidd|Sind|Sogd|Sogo|Sora|Soyo|Sund|Sylo|Syr[cejn]|"
-            + "Tagb|Takr|Tal[eu]|Tang|Tavt|Teng|Tfng|Tglg|Tirh|"
-            + "Ugar|Vaii|Visp|Wara|Wcho|Wole|Xpeo|Xsux|Yezi|Yiii|Zanb|Zinh|Zmth)");
+        /**
+         * Recommended scripts that are allowed for comprehensive coverage.
+         * Not-recommended scripts (according to ScriptMetadata) are filtered out automatically.
+         */
+        final Pattern script100 = PatternCache.get("(Zinh)");
 
         final Pattern keys100 = PatternCache.get("(col(Alternate|Backwards|CaseFirst|CaseLevel|HiraganaQuaternary|"
             + "Normalization|Numeric|Reorder|Strength)|kv|sd|timezone|va|variableTop|x|d0|h0|i0|k0|m0|s0)");
@@ -401,7 +414,7 @@ public class TestCoverageLevel extends TestFmwkPlus {
             + "finance|native|traditional|adlm|ahom|bali|bhks|brah|cakm|cham|cyrl|diak|"
             + "gong|gonm|hanidays|hmng|hmnp|java|jpanyear|kali|lana(tham)?|lepc|limb|"
             + "math(bold|dbl|mono|san[bs])|modi|mong|mroo|mtei|mymr(shan|tlng)|"
-            + "newa|nkoo|olck|osma|rohg|saur|segment|shrd|sin[dh]|sora|sund|takr|talu|tirh|vaii|wara|wcho)");
+            + "newa|nkoo|olck|osma|rohg|saur|segment|shrd|sin[dh]|sora|sund|takr|talu|tirh|tnsa|vaii|wara|wcho)");
 
         final Pattern collation100 = PatternCache.get("("
             + "big5han|compat|dictionary|emoji|eor|gb2312han|phonebook|phonetic|pinyin|reformed|searchjl|stroke|traditional|unihan|zhuyin)");
@@ -524,6 +537,10 @@ public class TestCoverageLevel extends TestFmwkPlus {
                 if (scriptType.startsWith("Q") || "short".equals(xpp.findAttributeValue("script", "alt"))) {
                     continue;
                 }
+                ScriptMetadata.Info scriptInfo = ScriptMetadata.getInfo(scriptType);
+                if (scriptInfo == null || scriptInfo.idUsage != ScriptMetadata.IdUsage.RECOMMENDED) {
+                    continue;
+                }
                 if (script100.matcher(scriptType).matches()) {
                     continue;
                 }
@@ -574,6 +591,10 @@ public class TestCoverageLevel extends TestFmwkPlus {
             } else if (path.startsWith("//ldml/dates/calendars")) {
                 String calType = xpp.findAttributeValue("calendar", "type");
                 if (!calType.matches("(gregorian|generic)")) {
+                    continue;
+                }
+                // So far we are generating datetimeSkeleton mechanically, no coverage
+                if (xpp.containsElement("datetimeSkeleton")) {
                     continue;
                 }
                 String element = xpp.getElement(-1);
@@ -635,6 +656,8 @@ public class TestCoverageLevel extends TestFmwkPlus {
     public void testBreakingLogicalGrouping() {
         checkBreakingLogicalGrouping("en");
         checkBreakingLogicalGrouping("ar");
+        checkBreakingLogicalGrouping("de");
+        checkBreakingLogicalGrouping("pl");
     }
 
     private void checkBreakingLogicalGrouping(String localeId) {
@@ -673,7 +696,7 @@ public class TestCoverageLevel extends TestFmwkPlus {
     }
 
     public void testLogicalGroupingSamples() {
-        System.out.println(GrammarInfo.SEED_LOCALES);
+        getLogger().fine(GrammarInfo.getGrammarLocales().toString());
         String[][] test = {
             {"de",
                 "SINGLETON",
@@ -788,7 +811,7 @@ public class TestCoverageLevel extends TestFmwkPlus {
                 Set<String> grouping = new TreeSet<>(LogicalGrouping.getPaths(cldrFile, path));
                 final Multimap<String, String> deltaValue = delta(expected, grouping);
                 if (seen.add(deltaValue)) {
-                    assertEquals("Logical group for " + path, ImmutableListMultimap.of(), deltaValue);
+                    assertEquals("Logical group for " + locale + ", " + path, ImmutableListMultimap.of(), deltaValue);
                 }
                 PathType actualPathType = PathType.getPathTypeFromPath(path);
                 assertEquals("PathType", expectedPathType, actualPathType);

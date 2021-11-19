@@ -14,13 +14,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.unicode.cldr.util.SupplementalDataInfo.PluralInfo;
+import org.unicode.cldr.util.UnitConverter.UnitSystem;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.ibm.icu.util.Freezable;
 import com.ibm.icu.util.Output;
 
@@ -34,16 +33,17 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
     public enum GrammaticalTarget {nominal}
 
     /**
-     * The ordering of these values is intended to put the default values first, and to group values together that tend to have similar forms.
+     * The ordering of these values is intended to put the default values first, and to group values together that tend to have similar forms for the most common cases,
+     * then have the rest in alphabetical order.
      */
-    public enum CaseValues {nominative, vocative, accusative, oblique, genitive, dative, locative, instrumental, prepositional,
-        ablative, adessive, allative, causal, delative, elative, essive, illative, inessive, sublative, superessive, terminative, translative;
+    public enum CaseValues {nominative, vocative, accusative, oblique, genitive, dative, locative, instrumental, prepositional, ablative,
+        abessive, adessive, allative, causal, comitative, delative, elative, ergative, essive, illative, inessive, locativecopulative, partitive, sociative, sublative, superessive, terminative, translative;
         public static Comparator<String> COMPARATOR = EnumComparator.create(CaseValues.class);
     }
     public enum GenderValues {neuter, masculine, inanimate, animate, common, personal, feminine;
         public static Comparator<String> COMPARATOR = EnumComparator.create(GenderValues.class);
     }
-    public enum DefinitenessValues {indefinite, definite, construct;
+    public enum DefinitenessValues {unspecified, indefinite, definite, construct;
         public static Comparator<String> COMPARATOR = EnumComparator.create(DefinitenessValues.class);
     }
     public enum PluralValues {zero, one, two, few, many, other;
@@ -75,8 +75,15 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
         public CharSequence getSymbol() {
             return symbol;
         }
-        public String getDefault(Collection<String> values) {
-            return this == grammaticalGender && values != null && !values.contains("neuter") ? "masculine" : defaultValue;
+        /**
+         * Gets the default value. The parameter only needs to be set for grammaticalGender
+         */
+        public String getDefault(Collection<String> featureValuesFromGrammaticalInfo) {
+            return this == grammaticalGender
+                && featureValuesFromGrammaticalInfo != null
+                    && !featureValuesFromGrammaticalInfo.contains("neuter")
+                    ? "masculine"
+                        : defaultValue;
         }
         public static Matcher pathHasFeature(String path) {
             Matcher result = PATH_HAS_FEATURE.matcher(path);
@@ -101,6 +108,8 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
     private Map<GrammaticalTarget, Map<GrammaticalFeature, Map<GrammaticalScope,Set<String>>>> targetToFeatureToUsageToValues = new TreeMap<>();
     private boolean frozen = false;
 
+    /** Only internal */
+    @Deprecated
     public void add(GrammaticalTarget target, GrammaticalFeature feature, GrammaticalScope usage, String value) {
         Map<GrammaticalFeature, Map<GrammaticalScope,Set<String>>> featureToUsageToValues = targetToFeatureToUsageToValues.get(target);
         if (featureToUsageToValues == null) {
@@ -123,6 +132,8 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
         }
     }
 
+    /** Only internal */
+    @Deprecated
     public void add(GrammaticalTarget target, GrammaticalFeature feature, GrammaticalScope usage, Collection<String> valueSet) {
         Map<GrammaticalFeature, Map<GrammaticalScope,Set<String>>> featureToUsageToValues = targetToFeatureToUsageToValues.get(target);
         if (featureToUsageToValues == null) {
@@ -137,14 +148,31 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
             if (values == null) {
                 usageToValues.put(usage, values = new TreeSet<>());
             }
+            validate(feature, valueSet);
             values.addAll(valueSet);
         }
     }
 
 
+    private void validate(GrammaticalFeature feature, Collection<String> valueSet) {
+        for (String value : valueSet) {
+            validate(feature, value);
+        }
+    }
+
+    private void validate(GrammaticalFeature feature, String value) {
+        switch (feature) {
+        case grammaticalCase: CaseValues.valueOf(value); break;
+        case grammaticalDefiniteness: DefinitenessValues.valueOf(value); break;
+        case grammaticalGender: GenderValues.valueOf(value); break;
+        case grammaticalNumber: PluralValues.valueOf(value); break;
+        }
+    }
+
     /**
      * Note: when there is known to be no features, the featureRaw will be null
-     */
+     * Only internal */
+    @Deprecated
     public void add(String targetsRaw, String featureRaw, String usagesRaw, String valuesRaw) {
         for (String targetString : SupplementalDataInfo.split_space.split(targetsRaw)) {
             GrammaticalTarget target = GrammaticalTarget.valueOf(targetString);
@@ -305,20 +333,10 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
         return grammaticalAttributes;
     }
 
-    public static final ImmutableMultimap<String,PluralInfo.Count> NON_COMPUTABLE_PLURALS = ImmutableListMultimap.of(
-        "pl", PluralInfo.Count.one,
-        "pl", PluralInfo.Count.other,
-        "ru", PluralInfo.Count.one,
-        "ru", PluralInfo.Count.other);
     /**
      * TODO: change this to be data-file driven
      */
-    public static final Set<String> SEED_LOCALES = ImmutableSet.of("pl", "ru", "da", "de", "no", "sv", "hi", "id", "es", "fr", "it", "nl", "pt", "en", "ja", "th", "vi", "zh", "zh_TW", "ko", "yue");
-
-    /**
-     * TODO: change this to be data-file driven
-     */
-    public static final Set<String> SPECIAL_TRANSLATION_UNITS = ImmutableSet.of(
+    private static final Set<String> CORE_UNITS_NEEDING_GRAMMAR = ImmutableSet.of(
         // new in v38
         "mass-grain",
         "volume-dessert-spoon",
@@ -469,5 +487,96 @@ public class GrammarInfo implements Freezable<GrammarInfo>{
             sourcePlural.value = "one";
             return;
         }
+    }
+
+    /**
+     * Internal class for thread-safety
+     */
+    static class GrammarLocales {
+        static final Set<String> data = ImmutableSortedSet.copyOf(ImmutableSet.<String>builder()
+            .addAll(
+                CLDRConfig.getInstance().getSupplementalDataInfo()
+                .getLocalesWithFeatures(GrammaticalTarget.nominal, GrammaticalScope.units, GrammaticalFeature.grammaticalCase))
+            .addAll(
+                CLDRConfig.getInstance().getSupplementalDataInfo()
+                .getLocalesWithFeatures(GrammaticalTarget.nominal, GrammaticalScope.units, GrammaticalFeature.grammaticalGender)
+                ).build());
+    }
+
+    /**
+     * Return the locales that have either case or gender info for units (or both).
+     */
+    public static Set<String> getGrammarLocales() {
+        return GrammarLocales.data;
+    }
+
+    static final Set<String> INCLUDE_OTHER = ImmutableSet.of(
+        "g-force",
+        "arc-minute",
+        "arc-second",
+        "degree",
+        "revolution",
+        "bit",
+        "byte",
+        "week",
+        "calorie",
+        "pixel",
+        "generic",
+        "karat",
+        "percent",
+        "permille",
+        "permillion",
+        "permyriad",
+        "atmosphere",
+        "em",
+        "century",
+        "decade",
+        "month",
+        "year"
+        );
+    public static final boolean DEBUG = false;
+    /**
+     * Internal class for thread-safety
+     */
+    static class UnitsToAddGrammar {
+        static final Set<String> data;
+        static {
+            final CLDRConfig config = CLDRConfig.getInstance();
+            final UnitConverter converter = config.getSupplementalDataInfo().getUnitConverter();
+            Set<String> missing = new TreeSet<>();
+            Set<String> _data = new TreeSet<>();
+            for (String path : With.in(config.getRoot().iterator("//ldml/units/unitLength[@type=\"short\"]/unit"))) {
+                XPathParts parts = XPathParts.getFrozenInstance(path);
+                String unit = parts.getAttributeValue(3, "type");
+                // Add simple units
+                String shortUnit = converter.getShortId(unit);
+                if (INCLUDE_OTHER.contains(shortUnit)) {
+                    _data.add(unit);
+                    continue;
+                }
+                Set<UnitSystem> systems = converter.getSystemsEnum(shortUnit);
+                if (converter.isSimple(shortUnit)
+                    && !Collections.disjoint(systems, UnitSystem.SiOrMetric)) {
+                    _data.add(unit);
+                    continue;
+                }
+                missing.add(unit);
+            }
+            if (DEBUG) for (String unit : missing) {
+                String shortUnit = converter.getShortId(unit);
+                System.out.println("*Skipping\t" + unit
+                    + "\t" + converter.getQuantityFromUnit(shortUnit, false)
+                    + "\t" + converter.getSystemsEnum(shortUnit)
+                    + "\t" + (converter.isSimple(shortUnit) ? "SIMPLE" : ""));
+            }
+            data = ImmutableSet.copyOf(_data);
+        }
+    }
+
+    /**
+     * Return the units that we should get grammar information for.
+     */
+    public static Set<String> getUnitsToAddGrammar() {
+        return UnitsToAddGrammar.data;
     }
 }
