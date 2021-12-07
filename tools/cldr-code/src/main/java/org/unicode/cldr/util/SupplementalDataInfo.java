@@ -38,6 +38,9 @@ import org.unicode.cldr.tool.SubdivisionNames;
 import org.unicode.cldr.util.Builder.CBuilder;
 import org.unicode.cldr.util.CldrUtility.VariableReplacer;
 import org.unicode.cldr.util.DayPeriodInfo.DayPeriod;
+import org.unicode.cldr.util.GrammarInfo.GrammaticalFeature;
+import org.unicode.cldr.util.GrammarInfo.GrammaticalScope;
+import org.unicode.cldr.util.GrammarInfo.GrammaticalTarget;
 import org.unicode.cldr.util.Rational.RationalParser;
 import org.unicode.cldr.util.StandardCodes.LstrType;
 import org.unicode.cldr.util.SupplementalDataInfo.BasicLanguageData.Type;
@@ -888,8 +891,6 @@ public class SupplementalDataInfo {
 
     private Map<String, Set<TelephoneCodeInfo>> territoryToTelephoneCodeInfo = new TreeMap<>();
 
-    private Set<String> multizone = new TreeSet<>();
-
     private Map<String, String> zone_territory = new TreeMap<>();
 
     private Relation<String, String> zone_aliases = Relation
@@ -1088,7 +1089,6 @@ public class SupplementalDataInfo {
         allLanguages.addAll(baseLanguageToPopulation.keySet());
         allLanguages = Collections.unmodifiableSet(allLanguages);
         skippedElements = Collections.unmodifiableSet(skippedElements);
-        multizone = Collections.unmodifiableSet(multizone);
         zone_territory = Collections.unmodifiableMap(zone_territory);
         alias_zone = Collections.unmodifiableMap(alias_zone);
         references = Collections.unmodifiableMap(references);
@@ -2273,37 +2273,6 @@ public class SupplementalDataInfo {
         return zone_territory.keySet();
     }
 
-    /**
-     * Return the multizone countries (should change name).
-     *
-     * @return
-     */
-    public Set<String> getMultizones() {
-        // TODO Auto-generated method stub
-        return multizone;
-    }
-
-    private Set<String> singleRegionZones;
-
-    public Set<String> getSingleRegionZones() {
-        synchronized (this) {
-            if (singleRegionZones == null) {
-                singleRegionZones = new HashSet<>();
-                SupplementalDataInfo supplementalData = this; // TODO: this?
-                Set<String> multizoneCountries = supplementalData.getMultizones();
-                for (String zone : supplementalData.getCanonicalZones()) {
-                    String region = supplementalData.getZone_territory(zone);
-                    if (!multizoneCountries.contains(region) || zone.startsWith("Etc/")) {
-                        singleRegionZones.add(zone);
-                    }
-                }
-                singleRegionZones.remove("Etc/Unknown"); // remove special case
-                singleRegionZones = Collections.unmodifiableSet(singleRegionZones);
-            }
-        }
-        return singleRegionZones;
-    }
-
     public Set<String> getTerritoriesForPopulationData(String language) {
         return languageToTerritories.getAll(language);
     }
@@ -2895,10 +2864,16 @@ public class SupplementalDataInfo {
     volatile List<ApprovalRequirementMatcher> approvalMatchers = null;
 
     /**
-     * Only called by VoteResolver.
-     * @param loc
-     * @param PathHeader - which path this is applied to, or null if unknown.
-     * @return
+     * Get the preliminary number of required votes based on the given locale and PathHeader
+     *
+     * Important: this number may not agree with VoteResolver.getRequiredVotes
+     * since VoteResolver also takes the baseline status into account.
+     *
+     * Called by VoteResolver, ShowStarredCoverage, TestCoverage, and TestCoverageLevel.
+     *
+     * @param loc the CLDRLocale
+     * @param ph the PathHeader - which path this is applied to, or null if unknown.
+     * @return a number such as 4 or 8
      */
     public int getRequiredVotes(CLDRLocale loc, PathHeader ph) {
         if (approvalMatchers == null) {
@@ -3470,6 +3445,11 @@ public class SupplementalDataInfo {
         private final Set<Count> decimalKeywords;
         private final CountSampleList countSampleList;
         private final Map<Count, String> countToRule;
+        private final Set<Count> adjustedCounts;
+        private final Set<String> adjustedCountStrings;
+
+        // e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5
+        static final Pattern hasE = Pattern.compile("e\\s*!?=");
 
         private PluralInfo(Map<Count, String> countToRule, PluralType pluralType) {
             EnumMap<Count, String> tempCountToRule = new EnumMap<>(Count.class);
@@ -3495,6 +3475,10 @@ public class SupplementalDataInfo {
             EnumSet<Count> _keywords = EnumSet.noneOf(Count.class);
             EnumSet<Count> _integerKeywords = EnumSet.noneOf(Count.class);
             EnumSet<Count> _decimalKeywords = EnumSet.noneOf(Count.class);
+            Matcher hasEMatcher = hasE.matcher("");
+            Set<Count> _adjustedCounts = null;
+            Set<String> _adjustedCountStrings = null;
+
             for (String s : pluralRules.getKeywords()) {
                 Count c = Count.valueOf(s);
                 _keywords.add(c);
@@ -3508,7 +3492,19 @@ public class SupplementalDataInfo {
                 } else {
                     int debug = 1;
                 }
+                String parsedRules = pluralRules.getRules(s);
+                if (!hasEMatcher.reset(parsedRules).find()) {
+                    if (_adjustedCounts == null) {
+                        _adjustedCounts = new TreeSet<>();
+                        _adjustedCountStrings = new TreeSet<>();
+                    }
+                    _adjustedCounts.add(c);
+                    _adjustedCountStrings.add(s);
+                }
             }
+            adjustedCounts = _adjustedCounts == null ? Collections.emptySet() : ImmutableSet.copyOf(_adjustedCounts);
+            adjustedCountStrings = _adjustedCounts == null ? Collections.emptySet() : ImmutableSet.copyOf(_adjustedCountStrings);
+
             keywords = Collections.unmodifiableSet(_keywords);
             decimalKeywords = Collections.unmodifiableSet(_decimalKeywords);
             integerKeywords = Collections.unmodifiableSet(_integerKeywords);
@@ -3637,6 +3633,20 @@ public class SupplementalDataInfo {
 
         public Set<Count> getCounts() {
             return keywords;
+        }
+
+        /**
+         * Return the counts returned by the plural rules, adjusted to remove values that are not used in collecting data.
+         */
+        public Set<Count> getAdjustedCounts() {
+            return adjustedCounts;
+        }
+
+        /**
+         * Return the counts returned by the plural rules, adjusted to remove values that are not used in collecting data.
+         */
+        public Set<String> getAdjustedCountStrings() {
+            return adjustedCountStrings;
         }
 
         public Set<Count> getCounts(SampleType sampleType) {
@@ -4502,10 +4512,27 @@ public class SupplementalDataInfo {
     }
 
     /**
-     * locales that have grammar info
+     * Locales that have grammar info
      */
     public Set<String> hasGrammarInfo() {
         return grammarLocaleToTargetToFeatureToValues.keySet();
+    }
+
+    /**
+     * Locales that have grammar info for at least one of the features (with the given target and scope).
+     */
+    public Set<String> getLocalesWithFeatures (GrammaticalTarget target, GrammaticalScope scope, GrammaticalFeature... features) {
+        Set<String> locales = new TreeSet<>();
+        for (Entry<String, GrammarInfo> localeAndGrammar : grammarLocaleToTargetToFeatureToValues.entrySet()) {
+            final GrammarInfo grammarInfo = localeAndGrammar.getValue();
+            for (GrammaticalFeature feature : features) {
+                Collection<String> featureInfo = grammarInfo.get(target, feature, scope);
+                if (!featureInfo.isEmpty()) {
+                    locales.add(localeAndGrammar.getKey());
+                }
+            }
+        }
+        return ImmutableSet.copyOf(locales);
     }
 
     /**
@@ -4526,7 +4553,7 @@ public class SupplementalDataInfo {
     @Deprecated
     public GrammarInfo getGrammarInfo(String locale, boolean seedOnly) {
         for (;locale != null; locale = LocaleIDParser.getParent(locale)) {
-            if (seedOnly && !GrammarInfo.SEED_LOCALES.contains(locale)) {
+            if (seedOnly && !GrammarInfo.getGrammarLocales().contains(locale)) {
                 continue;
             }
             GrammarInfo result = grammarLocaleToTargetToFeatureToValues.get(locale);

@@ -19,6 +19,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -93,8 +94,6 @@ import com.ibm.icu.util.TimeZone;
 import com.ibm.icu.util.ULocale;
 
 public class TestSupplementalInfo extends TestFmwkPlus {
-    private static final boolean DEBUG = true;
-
     static CLDRConfig testInfo = CLDRConfig.getInstance();
 
     private static final StandardCodes STANDARD_CODES = StandardCodes.make();
@@ -587,6 +586,10 @@ public class TestSupplementalInfo extends TestFmwkPlus {
             {"kw", "many", "00,000,0000"},  // n != 1 and n % 100 = 1,21,41,61,81
             {"kw", "zero", "0"},    // n = 0
             {"fr", "many", ""},    // e is special
+            {"it", "many", ""},    // e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5
+            {"es", "many", ""},    // e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5
+            {"pt", "many", ""},    // e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5
+            {"pt_PT", "many", ""}, // e = 0 and i != 0 and i % 1000000 = 0 and v = 0 or e != 0..5
         };
         // parse out the exceptions
         Map<PluralInfo, Relation<Count, Integer>> exceptions = new HashMap<>();
@@ -717,7 +720,6 @@ public class TestSupplementalInfo extends TestFmwkPlus {
             if (seen.contains(s)) {
                 continue;
             }
-            // System.out.println(s + " => " + VettingViewer.gatherCodes(s));
 
             List<String> ss = new ArrayList<>(s);
             String last = ss.get(ss.size() - 1);
@@ -1903,7 +1905,9 @@ public class TestSupplementalInfo extends TestFmwkPlus {
         }
         if (!surveyToolLanguages.containsAll(mainLanguages)) {
             mainLanguages.removeAll(surveyToolLanguages);
-            assertEquals("No main/* languages are missing from Survey Tool:language names (eg <variable id='$language' type='choice'>) ",
+            // TODO: See https://unicode-org.atlassian.net/browse/CLDR-14974
+            // Currently there is a requirement that all locales in main/* are in attributeValueValidity.xml
+            assertEquals("main/* languages missing from <variable id='$language'/> in attributeValueValidity.xml",
                 Collections.EMPTY_SET, mainLanguages);
         }
     }
@@ -1917,6 +1921,7 @@ public class TestSupplementalInfo extends TestFmwkPlus {
     }
 
     public void TestGrammarInfo() {
+        final Logger logger = getLogger();
         Multimap<String,String> allValues = TreeMultimap.create();
         for (String locale : SUPPLEMENTAL.hasGrammarInfo()) {
             if (locale.contentEquals("tr")) {
@@ -1935,14 +1940,12 @@ public class TestSupplementalInfo extends TestFmwkPlus {
                     }
                 }
             }
-            if (DEBUG) {
-                System.out.println(grammarInfo.toString("\n" + locale + "\t"));
-            }
+            logger.fine(grammarInfo.toString("\n" + locale + "\t"));
         }
-        if (DEBUG) {
-            System.out.println();
+        if (logger.isLoggable(java.util.logging.Level.FINE)) {  // if level is at least FINE
+            logger.fine("");
             for (Entry<String, Collection<String>> entry : allValues.asMap().entrySet()) {
-                System.out.println(entry.getKey() + "\t" + Joiner.on(", ").join(entry.getValue()));
+                logger.fine(entry.getKey() + "\t" + Joiner.on(", ").join(entry.getValue()));
             }
         }
     }

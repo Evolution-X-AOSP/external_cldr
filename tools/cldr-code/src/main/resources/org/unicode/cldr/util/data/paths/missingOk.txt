@@ -28,3 +28,5 @@
 # More items ok to be missing
 //ldml/characters/parseLenients.* ; ok
 
+//ldml/layout/orientation/.* ; ok
+//ldml/units/unitLength[@type="narrow"]/.* ; ok
