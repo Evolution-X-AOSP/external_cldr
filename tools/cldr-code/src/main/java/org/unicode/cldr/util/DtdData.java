@@ -645,6 +645,10 @@ public class DtdData extends XMLFileReader.SimpleHandler {
     @Deprecated
     @Override
     public void handleComment(String path, String comment) {
+        if (comment.contains("Copyright")) {
+            // Zap the copyright comment, replace it with the current one.
+            comment = CldrUtility.getCopyrightString();
+        }
         if (SHOW_ALL) {
             // <!-- true and false are deprecated. -->
             System.out.println("<!-- " + comment.trim() + " -->");
@@ -1308,6 +1312,7 @@ public class DtdData extends XMLFileReader.SimpleHandler {
         "energy-therm-us",
         "force-pound-force",
         "force-newton",
+        "force-kilowatt-hour-per-100-kilometer",
         "frequency-gigahertz", "frequency-megahertz", "frequency-kilohertz", "frequency-hertz",
         "graphics-em", "graphics-pixel", "graphics-megapixel",
         "graphics-pixel-per-centimeter", "graphics-pixel-per-inch",

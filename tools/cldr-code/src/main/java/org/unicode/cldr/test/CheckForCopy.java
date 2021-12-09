@@ -54,7 +54,7 @@ public class CheckForCopy extends FactoryCheckCLDR {
     private static final RegexLookup<Boolean> SKIP_CODE_CHECK = new RegexLookup<Boolean>()
         .add("^//ldml/characterLabels/characterLabel", true)
         .add("^//ldml/dates/fields/field\\[@type=\"(era|week|minute|quarter|second)\"]/displayName", true)
-        .add("^//ldml/localeDisplayNames/scripts/script\\[@type=\"(Jamo|Thai|Ahom|Loma|Moon|Newa|Arab|Lisu|Bali|Cham|Modi)\"]", true)
+        .add("^//ldml/localeDisplayNames/scripts/script\\[@type=\"(Jamo|Thai|Ahom|Loma|Moon|Newa|Arab|Lisu|Bali|Cham|Modi|Toto)\"]", true)
         .add("^//ldml/localeDisplayNames/languages/language\\[@type=\"(fon|gan|luo|tiv|yao|vai)\"]", true)
         .add("^//ldml/dates/timeZoneNames/metazone\\[@type=\"GMT\"]", true)
         .add("^//ldml/localeDisplayNames/territories/territory\\[@type=\"[^\"]*+\"]\\[@alt=\"short\"]", true)
@@ -155,14 +155,12 @@ public class CheckForCopy extends FactoryCheckCLDR {
         }
         if (CldrUtility.INHERITANCE_MARKER.equals(value)) {
             value = cldrFile.getConstructedBaileyValue(path, null, null);
-        }
-        if (value == null) {
-            return Failure.ok;
-        }
-        if ("en".equals(loc) || loc.startsWith("en_")) {
-            if ("year".equals(value) || "month".equals(value) || "day".equals(value) || "hour".equals(value)) {
+            if (value == null) {
                 return Failure.ok;
             }
+        }
+        if (sameAsEnglishOK(loc, path, value)) {
+            return Failure.ok;
         }
         String value2 = value;
         if (isExplicitBailey) {
@@ -191,6 +189,19 @@ public class CheckForCopy extends FactoryCheckCLDR {
             }
         }
         return failure;
+    }
+
+    private static boolean sameAsEnglishOK(String loc, String path, String value) {
+        if (path.startsWith("//ldml/units/unitLength")
+            || path.startsWith("//ldml/characters/parseLenients")) {
+            return true;
+        }
+        if ("en".equals(loc) || loc.startsWith("en_")) {
+            if ("year".equals(value) || "month".equals(value) || "day".equals(value) || "hour".equals(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

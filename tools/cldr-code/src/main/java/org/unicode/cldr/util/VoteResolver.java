@@ -106,16 +106,19 @@ public class VoteResolver<T> {
      */
     public static final int HIGH_BAR = Level.tc.votes;
 
+    public static final int LOWER_BAR = (2 * Level.vetter.votes);
+
     /**
      * This is the level at which a vote counts. Each level also contains the
      * weight.
+     *
+     * Code related to Level.expert removed 2021-05-18 per CLDR-14597
      */
     public enum Level {
         locked(   0 /* votes */, 999 /* stlevel */),
         street(   1 /* votes */, 10  /* stlevel */),
         anonymous(0 /* votes */, 8   /* stlevel */),
         vetter(   4 /* votes */, 5   /* stlevel */),
-        expert(   8 /* votes */, 3   /* stlevel */),
         manager(  4 /* votes */, 2   /* stlevel */),
         tc(      20 /* votes */, 1   /* stlevel */),
         admin(  100 /* votes */, 0   /* stlevel */);
@@ -204,12 +207,16 @@ public class VoteResolver<T> {
 
         /**
          * Policy: can this user create or set a user to the specified level?
+         *
+         * @param otherLevel the desired new level for the other user
+         *
+         * Note: UserRegistry.canSetUserLevel enforces additional limitations depending
+         * on more than this user's level and the other user's desired new level
          */
         public boolean canCreateOrSetLevelTo(Level otherLevel) {
-            return (this == admin) || // admin can set any level
-                (otherLevel != expert && // expert can't be set by any users but admin
-                    canManageSomeUsers() && // must be some sort of manager
-                    otherLevel.getSTLevel() >= getSTLevel()); // can't gain higher privs
+            return
+                canManageSomeUsers() && // must be some sort of manager
+                otherLevel.getSTLevel() >= getSTLevel(); // can't gain higher privs
         }
 
         /**
@@ -264,13 +271,22 @@ public class VoteResolver<T> {
         private Organization organization;
         private Level level;
         private String name;
-        private Set<String> locales = new TreeSet<>();
+        /**
+         * A set of locales associated with this voter; it is often empty (as when
+         * the user has "*" for their set of locales); it may not serve any purpose
+         * in ordinary operation of Survey Tool; its main (only?) purpose seems to be for
+         * computeMaxVotes, whose only purpose seems to be creation of localeToOrganizationToMaxVote,
+         * which is used only by ConsoleCheckCLDR (for obscure reason), not by Survey Tool itself.
+         */
+        private Set<CLDRLocale> locales = new TreeSet<>();
 
-        public VoterInfo(Organization organization, Level level, String name, Set<String> locales) {
+        public VoterInfo(Organization organization, Level level, String name, LocaleSet localeSet) {
             this.setOrganization(organization);
             this.setLevel(level);
             this.setName(name);
-            this.locales.addAll(locales);
+            if (!localeSet.isAllLocales()) {
+                this.locales.addAll(localeSet.getSet());
+            }
         }
 
         public VoterInfo(Organization organization, Level level, String name) {
@@ -311,19 +327,7 @@ public class VoteResolver<T> {
             return name;
         }
 
-        public void setLocales(Set<String> locales) {
-            this.locales = locales;
-        }
-
-        public void addLocales(Set<String> locales) {
-            this.locales.addAll(locales);
-        }
-
-        public Set<String> getLocales() {
-            return locales;
-        }
-
-        public void addLocale(String locale) {
+        private void addLocale(CLDRLocale locale) {
             this.locales.add(locale);
         }
 
@@ -459,7 +463,6 @@ public class VoteResolver<T> {
                 System.out.println("VoteInfo: " + info.getName() + info.getOrganization());
             }
             Organization organization = info.getOrganization();
-            //orgToVotes.get(organization).clear();
             orgToVotes.get(organization).add(value, votes, time.getTime());
             if (DEBUG) {
                 System.out.println("Adding now Info: " + organization.displayName + info.getName() + " is adding: " + votes + value
@@ -660,13 +663,15 @@ public class VoteResolver<T> {
     private EnumSet<Organization> conflictedOrganizations = EnumSet
         .noneOf(Organization.class);
     private OrganizationToValueAndVote<T> organizationToValueAndVote = new OrganizationToValueAndVote<>();
-    private T trunkValue;
-    private Status trunkStatus;
+    private T baselineValue;
+    private Status baselineStatus;
 
     private boolean resolved;
     private boolean valueIsLocked;
-    private int requiredVotes;
+    private int requiredVotes = 0;
     private SupplementalDataInfo supplementalDataInfo = SupplementalDataInfo.getInstance();
+    private CLDRLocale locale;
+    private PathHeader pathHeader;
 
     /**
      * usingKeywordAnnotationVoting: when true, use a special voting method for keyword
@@ -690,34 +695,26 @@ public class VoteResolver<T> {
     };
 
     /**
-     * Set the trunk value and status for this VoteResolver.
+     * Set the baseline (or "trunk") value and status for this VoteResolver.
      *
-     * Assume that we don't need to make any changes for INHERITANCE_MARKER here;
-     * the input will have INHERITANCE_MARKER if appropriate; do nothing special
-     * for a specific value that happens to match the Bailey value.
-     *
-     * Reference: https://unicode.org/cldr/trac/ticket/11857
-     *
-     * @param trunkValue the trunk value
-     * @param trunkStatus the trunk status
-     *
-     * TODO: consider renaming: setTrunk to setBaseline; getTrunkValue to getBaselineValue; getTrunkStatus to getBaselineStatus
+     * @param baselineValue the baseline value
+     * @param baselineStatus the baseline status
      */
-    public void setTrunk(T trunkValue, Status trunkStatus) {
-        this.trunkValue = trunkValue;
-        this.trunkStatus = trunkValue == null ? Status.missing : trunkStatus;
+    public void setBaseline(T baselineValue, Status baselineStatus) {
+        this.baselineValue = baselineValue;
+        this.baselineStatus = baselineValue == null ? Status.missing : baselineStatus;
     }
 
-    public T getTrunkValue() {
-        return trunkValue;
+    public T getBaselineValue() {
+        return baselineValue;
     }
 
-    public Status getTrunkStatus() {
-        return trunkStatus;
+    public Status getBaselineStatus() {
+        return baselineStatus;
     }
 
     /**
-     * Set the number of required votes for this VoteResolver, based on the given locale and PathHeader
+     * Set the locale and PathHeader for this VoteResolver
      *
      * You must call this whenever you are using a VoteResolver with a new locale or a new PathHeader
      *
@@ -725,14 +722,24 @@ public class VoteResolver<T> {
      * @param pathHeader the PathHeader
      */
     public void setLocale(CLDRLocale locale, PathHeader pathHeader) {
-        requiredVotes = supplementalDataInfo.getRequiredVotes(locale, pathHeader);
+        this.locale = locale;
+        this.pathHeader = pathHeader;
     }
 
     /**
      * What are the required votes for this item?
+     *
      * @return the number of votes (as of this writing: usually 4, 8 for established locales)
      */
     public int getRequiredVotes() {
+        if (requiredVotes == 0) {
+            int preliminaryRequiredVotes = supplementalDataInfo.getRequiredVotes(locale, pathHeader);
+            if (preliminaryRequiredVotes == HIGH_BAR && baselineStatus != Status.approved) {
+                requiredVotes = LOWER_BAR;
+            } else {
+                requiredVotes = preliminaryRequiredVotes;
+            }
+        }
         return requiredVotes;
     }
 
@@ -741,12 +748,21 @@ public class VoteResolver<T> {
      * associated with that base path.
      */
     public void clear() {
-        this.trunkValue = null;
-        this.trunkStatus = Status.missing;
-        this.setUsingKeywordAnnotationVoting(false);
+        baselineValue = null;
+        baselineStatus = Status.missing;
+        requiredVotes = 0;
+        locale = null;
+        pathHeader = null;
+        setUsingKeywordAnnotationVoting(false);
         organizationToValueAndVote.clear();
         resolved = valueIsLocked = false;
         values.clear();
+
+        // TODO: clear these out between reuse
+        // Are there other values that should be cleared?
+        oValue = null;
+        winningValue = null;
+        nValue = null;
     }
 
     /**
@@ -869,9 +885,9 @@ public class VoteResolver<T> {
             if (v1 != v2) {
                 return v1 < v2 ? 1 : -1; // highest vote first
             }
-            if (o1.equals(trunkValue)) {
+            if (o1.equals(baselineValue)) {
                 return -1;
-            } else if (o2.equals(trunkValue)) {
+            } else if (o2.equals(baselineValue)) {
                 return 1;
             }
             if (o1.equals(CldrUtility.INHERITANCE_MARKER)) {
@@ -908,16 +924,16 @@ public class VoteResolver<T> {
          * If there are no (unconflicted) votes, return baseline (trunk) if not null,
          * else INHERITANCE_MARKER if baileySet, else NO_WINNING_VALUE.
          * Avoid setting winningValue to null. VoteResolver should be fully in charge of vote resolution.
-         * Note: formerly if trunkValue was null here, winningValue was set to null, such
+         * Note: formerly if baselineValue was null here, winningValue was set to null, such
          * as for http://localhost:8080/cldr-apps/v#/aa/Numbering_Systems/7b8ee7884f773afa
          * -- in spite of which the Survey Tool client displayed "latn" (bailey) in the Winning
          * column. The behavior was originally implemented on the client (JavaScript) and later
          * (temporarily) as fixWinningValue in DataSection.java.
          */
         if (sortedValues.size() == 0) {
-            if (trunkValue != null) {
-                winningValue = trunkValue;
-                winningStatus = trunkStatus;
+            if (baselineValue != null) {
+                winningValue = baselineValue;
+                winningStatus = baselineStatus;
             } else if (organizationToValueAndVote.baileySet) {
                 winningValue = (T) CldrUtility.INHERITANCE_MARKER;
                 winningStatus = Status.missing;
@@ -969,12 +985,12 @@ public class VoteResolver<T> {
 
         oValue = winningValue;
 
-        winningStatus = computeStatus(weights[0], weights[1], trunkStatus);
+        winningStatus = computeStatus(weights[0], weights[1]);
 
-        // if we are not as good as the trunk, use the trunk
-        if (trunkStatus != null && winningStatus.compareTo(trunkStatus) < 0) {
-            winningStatus = trunkStatus;
-            winningValue = trunkValue;
+        // if we are not as good as the baseline (trunk), use the baseline
+        if (baselineStatus != null && winningStatus.compareTo(baselineStatus) < 0) {
+            winningStatus = baselineStatus;
+            winningValue = baselineValue;
             valuesWithSameVotes.clear();
             valuesWithSameVotes.add(winningValue);
         }
@@ -1345,15 +1361,14 @@ public class VoteResolver<T> {
      *
      * @param weight1 the weight (vote count) for the best value
      * @param weight2 the weight (vote count) for the next-best value
-     * @param oldStatus the old status (trunkStatus)
      * @return the Status
      */
-    private Status computeStatus(long weight1, long weight2, Status oldStatus) {
-        if (weight1 > weight2 && weight1 >= requiredVotes) {
+    private Status computeStatus(long weight1, long weight2) {
+        if (weight1 > weight2 && weight1 >= getRequiredVotes()) {
             return Status.approved;
         }
         if (weight1 > weight2 &&
-            (weight1 >= 4 && Status.contributed.compareTo(oldStatus) > 0
+            (weight1 >= 4 && Status.contributed.compareTo(baselineStatus) > 0
                 || weight1 >= 2 && organizationToValueAndVote.getOrgCount(winningValue) >= 2) ) {
             return Status.contributed;
         }
@@ -1367,7 +1382,7 @@ public class VoteResolver<T> {
         if (!resolved) {
             resolveVotes();
         }
-        Status possibleStatus = computeStatus(organizationToValueAndVote.getBestPossibleVote(), 0, trunkStatus);
+        Status possibleStatus = computeStatus(organizationToValueAndVote.getBestPossibleVote(), 0);
         return possibleStatus.compareTo(winningStatus) > 0 ? possibleStatus : winningStatus;
     }
 
@@ -1480,7 +1495,7 @@ public class VoteResolver<T> {
     public String toString() {
         return "{"
             + "bailey: " + (organizationToValueAndVote.baileySet ? ("“" + organizationToValueAndVote.baileyValue + "” ") : "none ")
-            + "trunk: {" + trunkValue + ", " + trunkStatus + "}, "
+            + "baseline: {" + baselineValue + ", " + baselineStatus + "}, "
             + organizationToValueAndVote
             + ", sameVotes: " + valuesWithSameVotes
             + ", O: " + getOValue()
@@ -1542,7 +1557,8 @@ public class VoteResolver<T> {
                 continue; // skip TCs, locked
             }
 
-            for (String locale : info.getLocales()) {
+            for (CLDRLocale loc : info.locales) {
+                String locale = loc.getBaseName();
                 Map<Organization, Level> organizationToMaxVote = localeToOrganizationToMaxVote.get(locale);
                 if (organizationToMaxVote == null) {
                     localeToOrganizationToMaxVote.put(locale,
@@ -1628,7 +1644,8 @@ public class VoteResolver<T> {
                 } else if (mainType.startsWith("locale")) {
                     final String localeIdString = Group.localeId.get(matcher);
                     if (localeIdString != null) {
-                        voterInfo.addLocale(localeIdString.split("_")[0]);
+                        CLDRLocale locale = CLDRLocale.getInstance(localeIdString.split("_")[0]);
+                        voterInfo.addLocale(locale);
                     } else if (DEBUG_HANDLER) {
                         System.out.println("\tskipping");
                     }
@@ -1837,8 +1854,8 @@ public class VoteResolver<T> {
         for (T value : totals.getKeysetSortedByCount(false, votesThenUcaCollator)) {
             result.put(value, totals.get(value));
         }
-        if (trunkValue != null && !totals.containsKey(trunkValue)) {
-            result.put(trunkValue, 0L);
+        if (baselineValue != null && !totals.containsKey(baselineValue)) {
+            result.put(baselineValue, 0L);
         }
         for (T value : organizationToValueAndVote.totalVotes.getMap().keySet()) {
             if (!result.containsKey(value)) {
@@ -1952,6 +1969,6 @@ public class VoteResolver<T> {
      * @return true or false
      */
     public boolean canFlagOnLosing() {
-        return valueIsLocked || (requiredVotes == HIGH_BAR);
+        return valueIsLocked || (getRequiredVotes() == HIGH_BAR);
     }
 }
