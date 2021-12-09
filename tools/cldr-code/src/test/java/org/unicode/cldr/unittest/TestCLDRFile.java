@@ -60,6 +60,11 @@ import com.ibm.icu.text.UTF16;
 import com.ibm.icu.text.UnicodeSet;
 import com.ibm.icu.util.Output;
 
+/**
+ * This is the original TestFwmk test case for CLDRFile.
+ * @see {@link org.unicode.cldr.util.TestCLDRFile}
+ * @see {@link org.unicode.cldr.util.CLDRFile}
+ */
 public class TestCLDRFile extends TestFmwk {
     private static final boolean DISABLE_TIL_WORKS = false;
 
@@ -103,7 +108,6 @@ public class TestCLDRFile extends TestFmwk {
             new TreeMap<String, Set<String>>(cldrFile.getComparator()),
             TreeSet.class);
         PluralInfo plurals = sdi.getPlurals(PluralType.cardinal, locale);
-        Set<String> normalKeywords = plurals.getCanonicalKeywords();
         for (String path : cldrFile.fullIterable()) {
             if (!path.contains("@count")) {
                 continue;
@@ -118,11 +122,18 @@ public class TestCLDRFile extends TestFmwk {
                 + path.substring(m.end(1));
             skeletonToKeywords.put(skeleton, m.group(1));
         }
+        Set<String> normalKeywords = plurals.getAdjustedCountStrings();
+
         for (Entry<String, Set<String>> entry : skeletonToKeywords
             .keyValuesSet()) {
+            final String abbreviatedPath = entry.getKey();
+            Set<String> expected = normalKeywords;
+            if (abbreviatedPath.startsWith("//ldml/numbers/minimalPairs/pluralMinimalPairs")) {
+                expected = plurals.getCanonicalKeywords();
+            }
             assertEquals(
-                "Incorrect keywords: " + locale + ", " + entry.getKey(),
-                normalKeywords, entry.getValue());
+                "Incorrect keywords: " + locale + ", " + abbreviatedPath,
+                expected, entry.getValue());
         }
     }
 
@@ -156,7 +167,7 @@ public class TestCLDRFile extends TestFmwk {
     public void testExtraPaths() {
         // for debugging
         final CLDRFile german = CLDRConfig.getInstance().getCldrFactory().make("de", true);
-        System.out.println();
+        getLogger().fine("");
         Set<String> sorted = new TreeSet<>(german.getExtraPaths());
         PathHeader.Factory phf = PathHeader.getFactory();
         PatternPlaceholders pph = PatternPlaceholders.getInstance();
@@ -216,10 +227,10 @@ public class TestCLDRFile extends TestFmwk {
 
             }
         }
-        System.out.println("Units with grammar info: " + GrammarInfo.SPECIAL_TRANSLATION_UNITS.size());
-        System.out.println("Inflection Paths");
+        getLogger().fine("Units with grammar info: " + GrammarInfo.getUnitsToAddGrammar().size());
+        getLogger().fine("Inflection Paths");
         for (R2<Long, String> locale : extraPaths.getEntrySetSortedByCount(false, null)) {
-            System.out.println(locale.get0() + "\t" + locale.get1());
+            getLogger().fine(locale.get0() + "\t" + locale.get1());
         }
         if (!badCoverage.isEmpty()) {
             errln("Paths not at modern: " + Joiner.on("\n\t").join(badCoverage));
@@ -850,7 +861,7 @@ public class TestCLDRFile extends TestFmwk {
                 String source = af.getSourceLocaleID(xpath, status);
                 Level level = coverageLevel2.getLevel(xpath);
                 PathHeader ph = pathHeaderFactory.fromPath(xpath);
-                System.out.println(""
+                getLogger().fine(""
                     + "\nPathHeader:\t" + ph
                     + "\nValue:\t" + value
                     + "\nLevel:\t" + level

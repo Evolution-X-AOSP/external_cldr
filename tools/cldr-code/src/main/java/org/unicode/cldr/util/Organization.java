@@ -2,6 +2,7 @@ package org.unicode.cldr.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This list needs updating as a new organizations are added; that's by design
@@ -39,6 +40,7 @@ public enum Organization {
     microsoft("Microsoft"),
     mozilla("Mozilla"),
     netflix("Netflix"),
+    nyiakeng_puachue_hmong("Nyiakeng Puachue Hmong"),
     openinstitute("Open Inst (Cambodia)"),
     openoffice_org("Open Office"),
     oracle("Oracle", "sun", "Sun Micro"),
@@ -59,8 +61,21 @@ public enum Organization {
     private final String[] names;
 
     public static Organization fromString(String name) {
-        if(name == null) {
+        if (name == null) {
             throw new NullPointerException("Organization.fromString(null) called");
+        }
+        if (name.contains("Government of Pakistan")) {
+            /*
+             * "Government of Pakistan - National Language Authority"
+             * occurs in the cldr_users table; avoid problems with hyphen
+             */
+            return Organization.pakistan;
+        } else if (name.contains("Utilika")) {
+            /*
+             * "Utilika" and "Utilika Foundation" occur in the cldr_users table.
+             * Compare "Utilka Foundation", one of the variants for Organization.longnow
+             */
+            return Organization.longnow;
         }
         name = name.toLowerCase().replace('-', '_').replace('.', '_');
         Organization org = OrganizationNameMap.get(name);
@@ -90,5 +105,19 @@ public enum Organization {
     private Organization(String displayName, String... names) {
         this.displayName = displayName;
         this.names = names;
+    }
+
+    private LocaleSet localeSet = null;
+
+    public LocaleSet getCoveredLocales() {
+        if (localeSet == null) {
+            final Set<String> localeNameSet = StandardCodes.make().getLocaleCoverageLocales(this);
+            if (localeNameSet.contains(LocaleNormalizer.ALL_LOCALES)) {
+                localeSet = LocaleNormalizer.ALL_LOCALES_SET;
+            } else {
+                localeSet = new LocaleSet(localeNameSet);
+            }
+        }
+        return localeSet;
     }
 }
