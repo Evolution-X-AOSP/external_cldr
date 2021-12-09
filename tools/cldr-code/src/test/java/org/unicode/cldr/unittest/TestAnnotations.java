@@ -48,6 +48,7 @@ import com.ibm.icu.text.Collator;
 import com.ibm.icu.text.UnicodeSet;
 
 public class TestAnnotations extends TestFmwkPlus {
+    private static final String APPS_EMOJI_DIRECTORY = CLDRPaths.BASE_DIRECTORY + "/tools/cldr-apps/src/main/webapp/images/emoji";
     private static final boolean DEBUG = false;
 
     public static void main(String[] args) {
@@ -173,7 +174,7 @@ public class TestAnnotations extends TestFmwkPlus {
             String name = Emoji.getName(emoji);
             String annotationName = annotations.getShortName();
             if (!symbols.contains(emoji) && !emoji.contains("👲")) {
-                assertEquals(emoji, name, annotationName);
+                assertEquals(emoji + " (en.xml vs. emoji-test.txt)", name, annotationName);
             }
         }
     }
@@ -298,7 +299,7 @@ public class TestAnnotations extends TestFmwkPlus {
         Factory factoryAnnotations = SimpleFactory.make(CLDRPaths.ANNOTATIONS_DIRECTORY, ".*");
         CLDRFile enAnnotations = factoryAnnotations.make("en", false);
 
-        String emojiImageDir = CLDRPaths.BASE_DIRECTORY + "/tools/cldr-apps/src/main/webapp/images/emoji";
+        String emojiImageDir = APPS_EMOJI_DIRECTORY;
         for (String emoji : Emoji.getNonConstructed()) {
             String noVs = emoji.replace(Emoji.EMOJI_VARIANT, "");
 
@@ -352,7 +353,7 @@ public class TestAnnotations extends TestFmwkPlus {
                 String name = eng.getShortName(emoji);
                 String lastName = eng.getShortName(lastEmoji);
                 int errorType = ERR;
-                if (logKnownIssue("cldr13660", "slightly out of order")) {
+                if (logKnownIssue("CLDR-13660", "slightly out of order")) {
                     errorType = WARN;
                 }
                 msg("Out of order: "
@@ -508,7 +509,7 @@ public class TestAnnotations extends TestFmwkPlus {
         }
         for (Level level : Level.values()) {
             UnicodeSet us = levels.getSet(level);
-            System.out.println(level + "\t" + us.size());
+            getLogger().fine(level + "\t" + us.size());
             switch(level) {
             case COMPREHENSIVE:
                 UnicodeSet us2 = new UnicodeSet(us).removeAll(us.strings());

@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.unicode.cldr.test.CheckMetazones;
 import org.unicode.cldr.util.DayPeriodInfo.DayPeriod;
 import org.unicode.cldr.util.GrammarInfo.GrammaticalFeature;
 import org.unicode.cldr.util.GrammarInfo.GrammaticalScope;
@@ -123,7 +124,7 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
     public static final String SUPPLEMENTAL_NAME = "supplementalData";
     public static final String SUPPLEMENTAL_METADATA = "supplementalMetadata";
     public static final String SUPPLEMENTAL_PREFIX = "supplemental";
-    public static final String GEN_VERSION = "39";
+    public static final String GEN_VERSION = "40";
     public static final List<String> SUPPLEMENTAL_NAMES = Arrays.asList("characters", "coverageLevels", "dayPeriods", "genderList", "grammaticalFeatures",
         "languageInfo",
         "languageGroup", "likelySubtags", "metaZones", "numberingSystems", "ordinals", "pluralRanges", "plurals", "postalCodeData", "rgScope",
@@ -145,6 +146,28 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
         public static DraftStatus forString(String string) {
             return string == null ? DraftStatus.approved
                 : DraftStatus.valueOf(string.toLowerCase(Locale.ENGLISH));
+        }
+
+        /**
+         * Get the draft status from a full xpath
+         * @param xpath
+         * @return
+         */
+        public static DraftStatus forXpath(String xpath) {
+            final String status = XPathParts.getFrozenInstance(xpath).getAttributeValue(-1, "draft");
+            return forString(status);
+        }
+
+        /**
+         * Return the XPath suffix for this draft status
+         * or "" for approved.
+         */
+        public String asXpath() {
+            if (this == approved) {
+                return "";
+            } else {
+                return "[@draft=\"" + name() + "\"]";
+            }
         }
     }
 
@@ -550,16 +573,32 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
         if (initialComment == null || initialComment.isEmpty()) {
             return CldrUtility.getCopyrightString();
         } else {
+            boolean fe0fNote = false;
             StringBuilder sb = new StringBuilder(CldrUtility.getCopyrightString()).append(XPathParts.NEWLINE);
             for (String line : LINE_SPLITTER.split(initialComment)) {
+                if (line.startsWith("Warnings: All cp values have U+FE0F characters removed.")) {
+                    fe0fNote = true;
+                    continue;
+                }
                 if (line.contains("Copyright")
                     || line.contains("©")
                     || line.contains("trademark")
                     || line.startsWith("CLDR data files are interpreted")
-                    || line.startsWith("For terms of use")) {
+                    || line.startsWith("SPDX-License-Identifier")
+                    || line.startsWith("Warnings: All cp values have U+FE0F characters removed.")
+                    || line.startsWith("For terms of use")
+                    || line.startsWith("according to the LDML specification")
+                    || line.startsWith("terms of use, see http://www.unicode.org/copyright.html")
+                    ) {
                     continue;
                 }
                 sb.append(XPathParts.NEWLINE).append(line);
+            }
+            if (fe0fNote) {
+                // Keep this on a separate line.
+                sb.append(XPathParts.NEWLINE)
+                .append("Warnings: All cp values have U+FE0F characters removed. See /annotationsDerived/ for derived annotations.")
+                .append(XPathParts.NEWLINE);
             }
             return sb.toString();
         }
@@ -2473,6 +2512,9 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
      */
     private String getTZName(String tzcode, String format) {
         String longid = getLongTzid(tzcode);
+        if (tzcode.length() == 4 && !tzcode.equals("gaza")) {
+            return longid;
+        }
         TimezoneFormatter tzf = new TimezoneFormatter(this);
         return tzf.getFormattedZone(longid, format, 0);
     }
@@ -3363,7 +3405,7 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
         }
         Set<Count> pluralCounts = Collections.emptySet();
         if (plurals != null) {
-            pluralCounts = plurals.getCounts();
+            pluralCounts = plurals.getAdjustedCounts();
             if (pluralCounts.size() != 1) {
                 // we get all the root paths with count
                 addPluralCounts(toAddTo, pluralCounts, this);
@@ -3393,9 +3435,14 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
         Set<String> zones = supplementalData.getAllMetazones();
 
         for (String zone : zones) {
+            final boolean metazoneUsesDST = CheckMetazones.metazoneUsesDST(zone);
             for (String width : new String[] { "long", "short" }) {
                 for (String type : new String[] { "generic", "standard", "daylight" }) {
-                    toAddTo.add("//ldml/dates/timeZoneNames/metazone[@type=\"" + zone + "\"]/" + width + "/" + type);
+                    if (metazoneUsesDST || type.equals("standard")) {
+                        // Only add /standard for non-DST metazones
+                        final String path = "//ldml/dates/timeZoneNames/metazone[@type=\"" + zone + "\"]/" + width + "/" + type;
+                        toAddTo.add(path);
+                    }
                 }
             }
         }
@@ -3430,26 +3477,18 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
         // grammatical info
 
         GrammarInfo grammarInfo = supplementalData.getGrammarInfo(getLocaleID(), true);
-
-        if ("de".equals(getLocaleID())) {
-            int debug = 0;
-        }
-
         if (grammarInfo != null) {
             if (grammarInfo.hasInfo(GrammaticalTarget.nominal)) {
                 Collection<String> genders = grammarInfo.get(GrammaticalTarget.nominal, GrammaticalFeature.grammaticalGender, GrammaticalScope.units);
                 Collection<String> rawCases = grammarInfo.get(GrammaticalTarget.nominal, GrammaticalFeature.grammaticalCase, GrammaticalScope.units);
                 Collection<String> nomCases = rawCases.isEmpty() ? casesNominativeOnly : rawCases;
-                Collection<Count> adjustedPlurals = GrammarInfo.NON_COMPUTABLE_PLURALS.get(locale);
-                if (adjustedPlurals.isEmpty()) {
-                    adjustedPlurals = pluralCounts;
-                } else {
-                    int debug = 0;
-                }
+                Collection<Count> adjustedPlurals = pluralCounts;
+                // There was code here allowing fewer plurals to be used, but is retracted for now (needs more thorough integration in logical groups, etc.)
+                // This note is left for 'blame' to find the old code in case we revive that.
 
                 // TODO use UnitPathType to get paths
                 if (!genders.isEmpty()) {
-                    for (String unit : GrammarInfo.SPECIAL_TRANSLATION_UNITS) {
+                    for (String unit : GrammarInfo.getUnitsToAddGrammar()) {
                         toAddTo.add("//ldml/units/unitLength[@type=\"long\"]/unit[@type=\"" + unit + "\"]/gender");
                     }
                     for (Count plural : adjustedPlurals) {
@@ -3475,7 +3514,7 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
                         toAddTo.add("//ldml/numbers/minimalPairs/caseMinimalPairs[@case=\"" + case1 + "\"]");
 
                         for (Count plural : adjustedPlurals) {
-                            for (String unit : GrammarInfo.SPECIAL_TRANSLATION_UNITS) {
+                            for (String unit : GrammarInfo.getUnitsToAddGrammar()) {
                                 toAddTo.add("//ldml/units/unitLength[@type=\"long\"]/unit[@type=\"" + unit + "\"]/unitPattern"
                                     + GrammarInfo.getGrammaticalInfoAttributes(grammarInfo, UnitPathType.unit, plural.toString(), null, case1));
                             }
@@ -3504,34 +3543,6 @@ public class CLDRFile implements Freezable<CLDRFile>, Iterable<String>, LocaleSt
                 }
                 toAddTo.add(start + count + end);
             }
-        }
-    }
-
-    private Matcher typeValueMatcher = PatternCache.get("\\[@type=\"([^\"]*)\"\\]").matcher("");
-
-    public boolean isPathExcludedForSurvey(String distinguishedPath) {
-        // for now, just zones
-        if (distinguishedPath.contains("/exemplarCity")) {
-            excludedZones = getExcludedZones();
-            typeValueMatcher.reset(distinguishedPath).find();
-            if (excludedZones.contains(typeValueMatcher.group(1))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private Set<String> excludedZones;
-
-    public Set<String> getExcludedZones() {
-        synchronized (this) {
-            if (excludedZones == null) {
-                SupplementalDataInfo supplementalData = CLDRConfig.getInstance().getSupplementalDataInfo();
-                // SupplementalDataInfo.getInstance(getSupplementalDirectory());
-                excludedZones = new HashSet<>(supplementalData.getSingleRegionZones());
-                excludedZones = Collections.unmodifiableSet(excludedZones); // protect
-            }
-            return excludedZones;
         }
     }
 

@@ -24,6 +24,7 @@ import org.unicode.cldr.util.CLDRConfig;
 import org.unicode.cldr.util.CLDRFile;
 import org.unicode.cldr.util.CLDRFile.Status;
 import org.unicode.cldr.util.CLDRPaths;
+import org.unicode.cldr.util.CLDRURLS;
 import org.unicode.cldr.util.CldrUtility;
 import org.unicode.cldr.util.Containment;
 import org.unicode.cldr.util.Counter;
@@ -124,6 +125,9 @@ public class TestPathHeader extends TestFmwkPlus {
             for (String e : missing) {
                 errln("Path Regex never matched:\t" + e);
             }
+        }
+        if (!pathChecker.badHeaders.isEmpty()) {
+            System.out.println("For help with DTD updates: " + CLDRURLS.CLDR_UPDATINGDTD_URL);
         }
     }
 
@@ -348,27 +352,24 @@ public class TestPathHeader extends TestFmwkPlus {
             CLDRFile cldrFile = info.getCLDRFile(locale, true);
             CoverageLevel2 coverageLevel = CoverageLevel2.getInstance(locale);
             for (String path : cldrFile.fullIterable()) {
-                // if (!path.contains("@count")) {
-                // continue;
-                // }
                 Level level = coverageLevel.getLevel(path);
                 if (supplemental.isDeprecated(DtdType.ldml, path)) {
                     continue;
                 }
 
-                if (Level.OPTIONAL.compareTo(level) != 0) {
+                if (Level.COMPREHENSIVE.compareTo(level) != 0) {
                     continue;
                 }
 
-                PathHeader p = pathHeaderFactory.fromPath(path);
-                final SurveyToolStatus status = p.getSurveyToolStatus();
-                if (status == SurveyToolStatus.DEPRECATED) {
+                PathHeader ph = pathHeaderFactory.fromPath(path);
+                if (ph == null || ph.shouldHide()) {
                     continue;
                 }
+                final SurveyToolStatus status = ph.getSurveyToolStatus();
                 sorted.put(
-                    p,
-                    locale + "\t" + status + "\t" + p + "\t"
-                        + p.getOriginalPath());
+                    ph,
+                    locale + "\t" + status + "\t" + ph + "\t"
+                        + ph.getOriginalPath());
             }
             Set<String> codes = new LinkedHashSet<>();
             PathHeader old = null;
@@ -464,9 +465,8 @@ public class TestPathHeader extends TestFmwkPlus {
             PathHeader p = pathHeaderFactory.fromPath(path);
             SurveyToolStatus status = p.getSurveyToolStatus();
 
-            boolean hideCoverage = level == Level.OPTIONAL;
-            boolean hidePathHeader = status == SurveyToolStatus.DEPRECATED
-                || status == SurveyToolStatus.HIDE;
+            boolean hideCoverage = level == Level.COMPREHENSIVE;
+            boolean hidePathHeader = p.shouldHide();
             if (hidePathHeader != hideCoverage) {
                 String message = "PathHeader: " + status + ", Coverage: "
                     + level + ": " + path;
@@ -672,7 +672,6 @@ public class TestPathHeader extends TestFmwkPlus {
             SurveyToolStatus.class);
         Set<String> nuked = new HashSet<>();
         Set<String> deprecatedStar = new HashSet<>();
-        Set<String> differentStar = new HashSet<>();
 
         for (String path : nativeFile.fullIterable()) {
 
@@ -685,25 +684,10 @@ public class TestPathHeader extends TestFmwkPlus {
                     + ": " + p);
             }
 
-            final SurveyToolStatus tempSTS = surveyToolStatus == SurveyToolStatus.DEPRECATED ? SurveyToolStatus.HIDE
-                : surveyToolStatus;
             String starred = starrer.set(path);
             List<String> attr = starrer.getAttributes();
             if (surveyToolStatus != SurveyToolStatus.READ_WRITE) {
                 nuked.add(starred);
-            }
-
-            // check against old
-            SurveyToolStatus oldStatus = SurveyToolStatus.READ_WRITE;
-
-            if (tempSTS != oldStatus
-                && oldStatus != SurveyToolStatus.READ_WRITE
-                && !path.endsWith(APPEND_TIMEZONE_END)) {
-                if (!differentStar.contains(starred)) {
-                    errln("Different from old:\t" + oldStatus + "\tnew:\t"
-                        + surveyToolStatus + "\t" + path);
-                    differentStar.add(starred);
-                }
             }
 
             // check against deprecated
@@ -780,10 +764,7 @@ public class TestPathHeader extends TestFmwkPlus {
         checkPathDescriptionCompleteness(pathDescription, normal,
             "//ldml/numbers/defaultNumberingSystem", alreadySeen, starrer);
         for (PathHeader pathHeader : getPathHeaders(english)) {
-            final SurveyToolStatus surveyToolStatus = pathHeader
-                .getSurveyToolStatus();
-            if (surveyToolStatus == SurveyToolStatus.DEPRECATED
-                || surveyToolStatus == SurveyToolStatus.HIDE) {
+            if (pathHeader.shouldHide()) {
                 continue;
             }
             String path = pathHeader.getOriginalPath();
@@ -1244,6 +1225,9 @@ public class TestPathHeader extends TestFmwkPlus {
                     }
                 }
             }
+        }
+        if (!pathChecker.badHeaders.isEmpty()) {
+            System.out.println("For help with DTD updates: " + CLDRURLS.CLDR_UPDATINGDTD_URL);
         }
     }
 

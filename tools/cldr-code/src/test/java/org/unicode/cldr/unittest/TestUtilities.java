@@ -12,12 +12,14 @@ import java.io.StringWriter;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -56,7 +58,9 @@ import org.unicode.cldr.util.XMLUploader;
 import org.unicode.cldr.util.props.ICUPropertyFactory;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Ordering;
 import com.ibm.icu.dev.util.UnicodeMap;
+import com.ibm.icu.impl.Relation;
 import com.ibm.icu.impl.Utility;
 import com.ibm.icu.lang.UCharacter;
 import com.ibm.icu.lang.UProperty;
@@ -65,11 +69,16 @@ import com.ibm.icu.text.UnicodeSet;
 import com.ibm.icu.util.ULocale;
 
 public class TestUtilities extends TestFmwkPlus {
+    public static boolean DEBUG = true;
+
     private static final UnicodeSet DIGITS = new UnicodeSet("[0-9]");
     static CLDRConfig testInfo = CLDRConfig.getInstance();
     private static final SupplementalDataInfo SUPPLEMENTAL_DATA_INFO = testInfo
         .getSupplementalDataInfo();
     private static final int STRING_ID_TEST_COUNT = 1024 * 16;
+
+    final int ONE_VETTER_BAR = Level.vetter.getVotes();
+    final int TWO_VETTER_BAR = 2 * ONE_VETTER_BAR;
 
     public static void main(String[] args) {
         new TestUtilities().run(args);
@@ -335,11 +344,11 @@ public class TestUtilities extends TestFmwkPlus {
         googleS(411, Organization.google, Level.street),
         googleV2(424, Organization.google, Level.vetter),
         appleV(304, Organization.apple, Level.vetter),
-        adobeE(208, Organization.adobe, Level.expert),
+        adobeE(204, Organization.adobe, Level.manager),
         adobeV(209, Organization.adobe, Level.vetter),
         ibmS(101, Organization.ibm, Level.street),
         ibmV(134, Organization.ibm, Level.vetter),
-        ibmE(118, Organization.ibm, Level.expert),
+        ibmE(114, Organization.ibm, Level.manager),
         ibmT(129, Organization.ibm, Level.tc),
         guestS2(802, Organization.guest, Level.street);
 
@@ -372,7 +381,7 @@ public class TestUtilities extends TestFmwkPlus {
         VoteResolver<String> resolver = new VoteResolver<>();
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
 
-        resolver.setTrunk("new-item", Status.approved);
+        resolver.setBaseline("new-item", Status.approved);
         assertEquals("", "new-item", resolver.getWinningValue());
 
         /*
@@ -387,7 +396,7 @@ public class TestUtilities extends TestFmwkPlus {
         VoteResolver<String> resolver = new VoteResolver<>();
         resolver.setLocale(CLDRLocale.getInstance("jgo"), null);
         final String jgo22trunk = "\uA78C"; // "[a á â ǎ b c d ɛ {ɛ́} {ɛ̂} {ɛ̌} {ɛ̀} {ɛ̄} f ɡ h i í î ǐ j k l m ḿ {m̀} {m̄} n ń ǹ {n̄} ŋ {ŋ́} {ŋ̀} {ŋ̄} ɔ {ɔ́} {ɔ̂} {ɔ̌} p {pf} s {sh} t {ts} u ú û ǔ ʉ {ʉ́} {ʉ̂} {ʉ̌} {ʉ̈} v w ẅ y z ꞌ]";
-        resolver.setTrunk(jgo22trunk, Status.approved); // seed/jgo.xml from 22
+        resolver.setBaseline(jgo22trunk, Status.approved); // seed/jgo.xml from 22
         // trunk
         logln("SVN: " + jgo22trunk);
         logln(resolver.toString());
@@ -400,7 +409,7 @@ public class TestUtilities extends TestFmwkPlus {
 
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
         resolver.add("fii", toVoterId("adobeE"));
         resolver.add("fii", toVoterId("appleV"));
         VoteStatus voteStatus;
@@ -417,7 +426,7 @@ public class TestUtilities extends TestFmwkPlus {
         }
         resolver.clear();
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk(s1, Status.approved);
+        resolver.setBaseline(s1, Status.approved);
         resolver.add(s2, toVoterId("appleV"));
         voteStatus = resolver.getStatusForOrganization(Organization.apple);
         assertEquals("", VoteStatus.ok, voteStatus);
@@ -435,7 +444,7 @@ public class TestUtilities extends TestFmwkPlus {
         VoteResolver<String> resolver = new VoteResolver<>();
 
         resolver.setLocale(CLDRLocale.getInstance("af"), null);
-        resolver.setTrunk("BQ", Status.missing);
+        resolver.setBaseline("BQ", Status.missing);
         VoteStatus status = resolver
             .getStatusForOrganization(Organization.openoffice_org);
         assertEquals("", VoteStatus.provisionalOrWorse, status);
@@ -459,7 +468,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setBaileyValue("bailey");
         // resolver.setLastRelease("Arabisch", Status.approved);
-        resolver.setTrunk("Arabisch", Status.approved);
+        resolver.setBaseline("Arabisch", Status.approved);
         status = resolver.getStatusForOrganization(Organization.openoffice_org);
         assertEquals("", VoteStatus.ok_novotes, status);
     }
@@ -472,7 +481,7 @@ public class TestUtilities extends TestFmwkPlus {
 
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("zebra", toVoterId("googleV"));
         resolver.add("apple", toVoterId("appleV"));
 
@@ -485,7 +494,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("zebra", toVoterId("googleV"));
         resolver.add("zebra", toVoterId("googleS"));
         resolver.add("apple", toVoterId("appleV"));
@@ -505,7 +514,7 @@ public class TestUtilities extends TestFmwkPlus {
 
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("mt"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("aardvark", toVoterId("adobeE"));
         resolver.add("zebra", toVoterId("ibmT"));
         assertEquals("", "zebra", resolver.getWinningValue()); // TC vote of 20
@@ -516,21 +525,21 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("mt"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("aardvark", toVoterId("adobeE"));
         resolver.add("zebra", toVoterId("ibmT"));
         resolver.add("aardvark", toVoterId("ibmE"));
         assertEquals("", "zebra", resolver.getWinningValue()); // TC vote of 20
         // beats
-        // expert's 8
+        // manager's 4
         // and its own
-        // expert's 8
+        // manager's 4
         assertEquals("", Status.approved, resolver.getWinningStatus());
 
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("mt"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("aardvark", toVoterId("adobeE"));
         resolver.add("zebra", toVoterId("ibmT"), Level.vetter.getVotes()); // NOTE:
         // reduced
@@ -541,14 +550,14 @@ public class TestUtilities extends TestFmwkPlus {
         assertEquals("", "aardvark", resolver.getWinningValue()); // Now
         // aardvark
         // wins -
-        // experts
-        // win out.
-        assertEquals("", Status.approved, resolver.getWinningStatus());
+        // managers
+        // win out as provisional
+        assertEquals("", Status.provisional, resolver.getWinningStatus());
 
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("mt"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("aardvark", toVoterId("adobeE"));
         resolver.add("zebra", toVoterId("ibmT"), Level.vetter.getVotes()); // NOTE:
         // reduced
@@ -558,9 +567,9 @@ public class TestUtilities extends TestFmwkPlus {
         assertEquals("", "aardvark", resolver.getWinningValue()); // Now
         // aardvark
         // wins -
-        // experts
+        // managers
         // win out.
-        assertEquals("", Status.approved, resolver.getWinningStatus());
+        assertEquals("", Status.provisional, resolver.getWinningStatus());
     }
 
     public void TestResolvedVoteCounts() {
@@ -571,7 +580,7 @@ public class TestUtilities extends TestFmwkPlus {
 
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
-        resolver.setTrunk("foo", oldStatus);
+        resolver.setBaseline("foo", oldStatus);
         resolver.add("zebra", toVoterId("googleV"));
         resolver.add("apple", toVoterId("appleV"));
 
@@ -583,7 +592,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
         resolver.add("zebra", toVoterId("googleV"));
         resolver.add("apple", toVoterId("appleV"));
         counts = resolver.getResolvedVoteCounts();
@@ -593,7 +602,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setBaileyValue("bailey");
         resolver.setLocale(CLDRLocale.getInstance("de"), null);
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
         resolver.add("zebra", toVoterId("googleS"));
         counts = resolver.getResolvedVoteCounts();
         logln(counts.toString());
@@ -601,11 +610,12 @@ public class TestUtilities extends TestFmwkPlus {
     }
 
     private void verifyRequiredVotes(VoteResolver<String> resolver, String locale,
-        String xpath, int required) {
+        String xpath, Status baselineStatus, int required) {
         StringBuilder sb = new StringBuilder();
         sb.append("Locale: " + locale);
         resolver.clear();
         resolver.setBaileyValue("bailey");
+        resolver.setBaseline("foo", baselineStatus);
         PathHeader ph = null;
         if (xpath != null) {
             sb.append(" XPath: " + xpath);
@@ -619,71 +629,58 @@ public class TestUtilities extends TestFmwkPlus {
     public void TestRequiredVotes() {
         VoteResolver.setVoterToInfo(testdata);
         VoteResolver<String> resolver = new VoteResolver<>();
-
-        verifyRequiredVotes(
-            resolver,
-            "mt",
+        verifyRequiredVotes(resolver, "mt",
             "//ldml/localeDisplayNames/languages/language[@type=\"fr_CA\"]",
-            4);
-        verifyRequiredVotes(
-            resolver,
-            "fr",
+            Status.missing, ONE_VETTER_BAR);
+        verifyRequiredVotes(resolver, "fr",
             "//ldml/localeDisplayNames/languages/language[@type=\"fr_CA\"]",
-            8);
-
-        assertEquals("VoteResolver.HIGH_BAR", VoteResolver.HIGH_BAR, 20);
+            Status.provisional, TWO_VETTER_BAR);
         verifyRequiredVotes(resolver, "es",
             "//ldml/numbers/symbols[@numberSystem=\"latn\"]/group",
-            VoteResolver.HIGH_BAR); // == 20
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "es",
             "//ldml/numbers/symbols[@numberSystem=\"latn\"]/decimal",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "hi",
             "//ldml/numbers/symbols[@numberSystem=\"deva\"]/decimal",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "hi",
             "//ldml/numbers/symbols[@numberSystem=\"deva\"]/group",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "ast",
-            "//ldml/numbers/symbols[@numberSystem=\"latn\"]/decimal", 4);
-        verifyRequiredVotes(resolver, "mt",
-            "//ldml/characters/exemplarCharacters", VoteResolver.HIGH_BAR);
+            "//ldml/numbers/symbols[@numberSystem=\"latn\"]/decimal",
+            Status.approved, ONE_VETTER_BAR);
         verifyRequiredVotes(resolver, "mt",
             "//ldml/characters/exemplarCharacters",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
+        verifyRequiredVotes(resolver, "mt",
+            "//ldml/characters/exemplarCharacters",
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "mt",
             "//ldml/characters/exemplarCharacters[@type=\"auxiliary\"]",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "mt",
             "//ldml/characters/exemplarCharacters[@type=\"numbers\"]",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "mt",
             "//ldml/characters/exemplarCharacters[@type=\"punctuation\"]",
-            VoteResolver.HIGH_BAR);
+            Status.approved, VoteResolver.HIGH_BAR);
         verifyRequiredVotes(resolver, "mt",
             "//ldml/characters/exemplarCharacters[@type=\"index\"]",
-            VoteResolver.HIGH_BAR);
-        verifyRequiredVotes(
-            resolver,
-            "es",
+            Status.approved, VoteResolver.HIGH_BAR);
+        verifyRequiredVotes(resolver, "es",
             "//ldml/dates/calendars/calendar[@type=\"gregorian\"]/days/dayContext[@type=\"format\"]/dayWidth[@type=\"wide\"]/day[@type=\"sun\"]",
-            VoteResolver.HIGH_BAR);
-        verifyRequiredVotes(
-            resolver,
-            "ast",
+            Status.approved, VoteResolver.HIGH_BAR);
+        verifyRequiredVotes(resolver, "ast",
             "//ldml/dates/calendars/calendar[@type=\"gregorian\"]/days/dayContext[@type=\"format\"]/dayWidth[@type=\"wide\"]/day[@type=\"sun\"]",
-            4);
-        verifyRequiredVotes(
-            resolver,
-            "es",
+            Status.approved, ONE_VETTER_BAR);
+        verifyRequiredVotes(resolver, "es",
             "//ldml/dates/calendars/calendar[@type=\"gregorian\"]/months/monthContext[@type=\"format\"]/monthWidth[@type=\"wide\"]/month[@type=\"1\"]",
-            VoteResolver.HIGH_BAR);
-        verifyRequiredVotes(
-            resolver,
-            "ast",
+            Status.provisional, VoteResolver.LOWER_BAR);
+        verifyRequiredVotes(resolver, "ast",
             "//ldml/dates/calendars/calendar[@type=\"gregorian\"]/months/monthContext[@type=\"format\"]/monthWidth[@type=\"wide\"]/month[@type=\"1\"]",
-            4);
-     }
+            Status.approved, ONE_VETTER_BAR);
+    }
 
     /**
      * In sublocales, for a typical path, the required votes should be 4, except for
@@ -695,8 +692,8 @@ public class TestUtilities extends TestFmwkPlus {
         final String path = "//ldml/annotations/annotation[@cp=\"🌏\"][@type=\"tts\"]";
         for (String locale : SubmissionLocales.CLDR_LOCALES) {
             if (locale.contains("_")) {
-                int expectedRequiredVotes = eightVoteSublocales.contains(locale) ? 8 : 4;
-                verifyRequiredVotes(resolver, locale, path, expectedRequiredVotes);
+                int expectedRequiredVotes = eightVoteSublocales.contains(locale) ? TWO_VETTER_BAR : ONE_VETTER_BAR;
+                verifyRequiredVotes(resolver, locale, path, Status.approved, expectedRequiredVotes);
             }
         }
     }
@@ -771,7 +768,8 @@ public class TestUtilities extends TestFmwkPlus {
             // "424=best",
             "411=best",
             "304=best",
-            "208=primo",
+            "204=primo",
+            "114=primo",
             // expected values
             "conflicts=[]",
             "value=primo",
@@ -784,7 +782,8 @@ public class TestUtilities extends TestFmwkPlus {
             // "424=best",
             "411=best",
             "304=best",
-            "208=primo",
+            "204=primo",
+            "114=primo",
             "101=best",
             // expected values
             "conflicts=[]",
@@ -867,7 +866,7 @@ public class TestUtilities extends TestFmwkPlus {
                 // load the resolver
                 resolver.setBaileyValue(baileyValue);
                 resolver.setLocale(CLDRLocale.getInstance(locale), null);
-                resolver.setTrunk(oldValue, oldStatus);
+                resolver.setBaseline(oldValue, oldStatus);
                 for (int voter : values.keySet()) {
                     resolver.add(values.get(voter), voter);
                 }
@@ -937,22 +936,22 @@ public class TestUtilities extends TestFmwkPlus {
             "locales list",
             "https://st.unicode.org/cldr-apps/v#locales///",
             CLDRConfig.getInstance().urls()
-                .forSpecial(CLDRURLS.Special.Locales));
+            .forSpecial(CLDRURLS.Special.Locales));
         assertEquals("maltese", "https://st.unicode.org/cldr-apps/v#/mt//",
             CLDRConfig.getInstance().urls().forLocale(maltese));
         assertEquals("korean in maltese",
             "https://st.unicode.org/cldr-apps/v#/mt//"
                 + KOREAN_LANGUAGE_STRID,
-            CLDRConfig.getInstance()
+                CLDRConfig.getInstance()
                 .urls().forXpath(maltese, KOREAN_LANGUAGE));
         assertEquals("korean in maltese via stringid",
             "https://st.unicode.org/cldr-apps/v#/mt//"
                 + KOREAN_LANGUAGE_STRID,
-            CLDRConfig.getInstance()
+                CLDRConfig.getInstance()
                 .urls().forXpathHexId(maltese, KOREAN_LANGUAGE_STRID));
         assertEquals("south east asia in maltese",
             "https://st.unicode.org/cldr-apps/v#/mt/C_SEAsia/", CLDRConfig
-                .getInstance().urls().forPage(maltese, PageId.C_SEAsia));
+            .getInstance().urls().forPage(maltese, PageId.C_SEAsia));
         try {
             String ret = CLDRConfig.getInstance().urls()
                 .forXpathHexId(maltese, KOREAN_LANGUAGE);
@@ -973,7 +972,7 @@ public class TestUtilities extends TestFmwkPlus {
         assertEquals("korean in maltese - absoluteUrl",
             "https://st.unicode.org/cldr-apps/v#/mt//"
                 + KOREAN_LANGUAGE_STRID,
-            CLDRConfig.getInstance()
+                CLDRConfig.getInstance()
                 .absoluteUrls().forXpath(maltese, KOREAN_LANGUAGE));
 
     }
@@ -1233,7 +1232,7 @@ public class TestUtilities extends TestFmwkPlus {
                 // load the resolver
                 resolver.setBaileyValue(baileyValue);
                 resolver.setLocale(CLDRLocale.getInstance(locale), null);
-                resolver.setTrunk(oldValue, oldStatus);
+                resolver.setBaseline(oldValue, oldStatus);
                 for (int voteEntry : valuesMap.keySet()) {
 
                     resolver.add(valuesMap.get(voteEntry).getValue(), valuesMap.get(voteEntry).getVoter());
@@ -1269,7 +1268,7 @@ public class TestUtilities extends TestFmwkPlus {
          */
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add("bailey", TestUser.appleV.voterId);
         resolver.add("bailey", TestUser.ibmV.voterId);
@@ -1283,7 +1282,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add(CldrUtility.INHERITANCE_MARKER, TestUser.appleV.voterId);
         resolver.add(CldrUtility.INHERITANCE_MARKER, TestUser.ibmV.voterId);
@@ -1297,7 +1296,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add("bailey", TestUser.appleV.voterId);
         resolver.add(CldrUtility.INHERITANCE_MARKER, TestUser.ibmV.voterId);
@@ -1312,7 +1311,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add("bailey", TestUser.appleV.voterId);
         resolver.add(CldrUtility.INHERITANCE_MARKER, TestUser.ibmV.voterId);
@@ -1325,7 +1324,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add("bailey", TestUser.appleV.voterId);
         resolver.add("not-bailey", TestUser.ibmV.voterId);
@@ -1342,7 +1341,7 @@ public class TestUtilities extends TestFmwkPlus {
         resolver.clear();
         resolver.setLocale(locale, path);
         resolver.setBaileyValue("bailey");
-        resolver.setTrunk("foo", Status.approved);
+        resolver.setBaseline("foo", Status.approved);
 
         resolver.add("bailey", TestUser.googleV.voterId);
         resolver.add("bailey", TestUser.appleV.voterId);
@@ -1390,6 +1389,100 @@ public class TestUtilities extends TestFmwkPlus {
         final MissingStatus status = VettingViewer.getMissingStatus(cldrFile, path, true /* latin */);
         if (status != expected) {
             errln("Got getMissingStatus = " + status.toString() + "; expected " + expected.toString());
+        }
+    }
+
+    /**
+     * Check that expected paths are Aliased, and have debugging code
+     */
+    public void TestMissingGrammar() {
+        // https://cldr-smoke.unicode.org/cldr-apps/v#/hu/Length/a4915bf505ffb49
+        final String path = "//ldml/units/unitLength[@type=\"long\"]/unit[@type=\"length-meter\"]/unitPattern[@count=\"one\"][@case=\"accusative\"]";
+        checkGrammarCoverage("hr", path,    MissingStatus.PRESENT, DEBUG, 1, 0, 0, 0, 0); // this isn't a very good test, since we have to adjust each time. Should create fake cldr data instead
+        checkGrammarCoverage("kw", path, MissingStatus.ABSENT, false, 0, 0, 1, 1, 0);
+        checkGrammarCoverage("en_NZ", path, MissingStatus.ALIASED, DEBUG, 1, 0, 0, 0, 0);
+    }
+
+    /**
+     * Check the getMissingStatus and getStatus. Note that the values may need to be adjusted in successive versions. The sizes are expected sizes.
+     * @param locale
+     * @param path
+     * @param statusExpected
+     * @param debug TODO
+     */
+    public void checkGrammarCoverage(final String locale, final String path, MissingStatus statusExpected, boolean debug, int... sizes) {
+        final CLDRFile cldrFile = testInfo.getCLDRFile(locale, true);
+        final MissingStatus expected = statusExpected;
+        final MissingStatus status = VettingViewer.getMissingStatus(cldrFile, path, true /* latin */);
+        if (status != expected) {
+            errln(locale + " got getMissingStatus = " + status.toString() + "; expected " + expected.toString());
+        }
+        Iterable<String> pathsToTest = Collections.singleton(path);
+        Counter<org.unicode.cldr.util.Level> foundCounter = new Counter<>();
+        Counter<org.unicode.cldr.util.Level> unconfirmedCounter = new Counter<>();
+        Counter<org.unicode.cldr.util.Level> missingCounter = new Counter<>();
+        Relation<MissingStatus, String> missingPaths = new Relation(new TreeMap<MissingStatus,String>(), TreeSet.class, Ordering.natural());
+        Set<String> unconfirmedPaths = new TreeSet<>();
+        VettingViewer.getStatus(pathsToTest, cldrFile, PathHeader.getFactory(),
+            foundCounter, unconfirmedCounter, missingCounter, missingPaths, unconfirmedPaths);
+        assertEquals(locale + " foundCounter (0)", sizes[0], foundCounter.getTotal());
+        assertEquals(locale + " unconfirmedCounter (1)", sizes[1], unconfirmedCounter.getTotal());
+        assertEquals(locale + " missingCounter (2)", sizes[2], missingCounter.getTotal());
+        assertEquals(locale + " missingPaths (3)", sizes[3], missingPaths.size());
+        assertEquals(locale + " unconfirmedPaths (4)", sizes[4], unconfirmedPaths.size());
+        showStatusResults(locale, foundCounter, unconfirmedCounter, missingCounter, missingPaths, unconfirmedPaths);
+        if (debug) {
+            foundCounter.clear();
+            unconfirmedCounter.clear();
+            missingCounter.clear();
+            missingPaths.clear();
+            unconfirmedPaths.clear();
+            pathsToTest = cldrFile.fullIterable();
+            VettingViewer.getStatus(pathsToTest, cldrFile, PathHeader.getFactory(),
+                foundCounter, unconfirmedCounter, missingCounter, missingPaths, unconfirmedPaths);
+            showStatusResults(locale, foundCounter, unconfirmedCounter, missingCounter, missingPaths, unconfirmedPaths);
+        }
+    }
+
+    public void showStatusResults(final String locale, Counter<org.unicode.cldr.util.Level> foundCounter,
+        Counter<org.unicode.cldr.util.Level> unconfirmedCounter, Counter<org.unicode.cldr.util.Level> missingCounter,
+        Relation<MissingStatus, String> missingPaths, Set<String> unconfirmedPaths) {
+        warnln("\n" + locale + " foundCounter:\t" + foundCounter
+            + "\n" + locale + " unconfirmedCounter:\t" + unconfirmedCounter
+            + "\n" + locale + " missingCounter:\t" + missingCounter
+            + "\n" + locale + " unconfirmedPaths:\t" + unconfirmedPaths
+            + "\n" + locale + " missing paths (modern):"
+            );
+        int count = 0;
+        for (Entry<MissingStatus, String> entry : missingPaths.entrySet()) {
+            final MissingStatus missingStatus = entry.getKey();
+            final String missingPath = entry.getValue();
+            warnln(++count
+                + "\t" + locale
+                + "\t" + missingStatus
+                + "\t" + missingPath
+                + "\t" + SUPPLEMENTAL_DATA_INFO.getCoverageLevel(missingPath, locale));
+        }
+    }
+
+    /**
+     * Test the function VoteResolver.Level.canCreateOrSetLevelTo()
+     *
+     * Compare org.unicode.cldr.unittest.web.TestUserRegistry.TestCanSetUserLevel()
+     */
+    public void TestCanCreateOrSetLevelTo() {
+        if (Level.vetter.canCreateOrSetLevelTo(Level.street)
+            || Level.anonymous.canCreateOrSetLevelTo(Level.street)
+            || Level.street.canCreateOrSetLevelTo(Level.locked)
+            || Level.locked.canCreateOrSetLevelTo(Level.locked)
+            ) {
+            errln("Only managers and above can change levels at all");
+        }
+        if (Level.manager.canCreateOrSetLevelTo(Level.tc)
+            || Level.manager.canCreateOrSetLevelTo(Level.admin)
+            || Level.tc.canCreateOrSetLevelTo(Level.admin)
+            ) {
+            errln("Can’t change anyone to a more privileged level than you");
         }
     }
 }
