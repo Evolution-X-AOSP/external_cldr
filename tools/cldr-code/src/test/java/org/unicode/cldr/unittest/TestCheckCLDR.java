@@ -27,6 +27,7 @@ import org.unicode.cldr.test.CheckDates;
 import org.unicode.cldr.test.CheckForExemplars;
 import org.unicode.cldr.test.CheckNames;
 import org.unicode.cldr.test.CheckNew;
+import org.unicode.cldr.test.OutdatedPaths;
 import org.unicode.cldr.test.SubmissionLocales;
 import org.unicode.cldr.test.TestCache;
 import org.unicode.cldr.test.TestCache.TestResultBundle;
@@ -43,6 +44,7 @@ import org.unicode.cldr.util.DayPeriodInfo;
 import org.unicode.cldr.util.DayPeriodInfo.DayPeriod;
 import org.unicode.cldr.util.DayPeriodInfo.Type;
 import org.unicode.cldr.util.Factory;
+import org.unicode.cldr.util.GrammarInfo;
 import org.unicode.cldr.util.LanguageTagParser;
 import org.unicode.cldr.util.Level;
 import org.unicode.cldr.util.Organization;
@@ -57,6 +59,7 @@ import org.unicode.cldr.util.SimpleXMLSource;
 import org.unicode.cldr.util.StandardCodes;
 import org.unicode.cldr.util.StandardCodes.LstrType;
 import org.unicode.cldr.util.StringId;
+import org.unicode.cldr.util.SupplementalDataInfo;
 import org.unicode.cldr.util.Validity;
 import org.unicode.cldr.util.Validity.Status;
 import org.unicode.cldr.util.VoteResolver.VoterInfo;
@@ -479,24 +482,47 @@ public class TestCheckCLDR extends TestFmwk {
         // * check the data files to ensure that it is in fact outdated.
         // * change the path to that value
 
-        String locale = "fr";
-        String path = "//ldml/localeDisplayNames/territories/territory[@type=\"MO\"][@alt=\"short\"]";
+        checkCheckNew("de", "//ldml/units/unitLength[@type=\"narrow\"]/unit[@type=\"duration-century\"]/displayName",
+            "");
+        checkCheckNew("de", "//ldml/localeDisplayNames/languages/language[@type=\"mi\"]",
+            "In CLDR baseline the English value for this field changed from “Maori” to “Māori”, but the corresponding value for your locale didn't change.");
+        checkCheckNew("de", "//ldml/localeDisplayNames/languages/language[@type=\"en\"]",
+            "");
+    }
+
+    public void checkCheckNew(String locale, String path, String expectedMessage) {
+        final String title = "CheckNew " + locale + ", " + path;
+
+        OutdatedPaths outdatedPaths = OutdatedPaths.getInstance();
+        boolean isOutdated = outdatedPaths.isOutdated(locale, path);
+
+        //
+        String oldEnglishValue = outdatedPaths.getPreviousEnglish(path);
+        if (!OutdatedPaths.NO_VALUE.equals(oldEnglishValue)) {
+            assertEquals(
+                title,
+                expectedMessage.isEmpty(),
+                !isOutdated);
+        }
+
         CheckCLDR c = new CheckNew(testInfo.getCommonAndSeedAndMainAndAnnotationsFactory());
         List<CheckStatus> result = new ArrayList<>();
         Map<String, String> options = new HashMap<>();
         c.setCldrFileToCheck(testInfo.getCLDRFile(locale, true), options, result);
         c.check(path, path, "foobar", options, result);
+        String actualMessage = "";
         for (CheckStatus status : result) {
             if (status.getSubtype() != Subtype.modifiedEnglishValue) {
                 continue;
             }
-            assertEquals(
-                null,
-                "The English value for this field changed from “Macau” to “Macao’, but the corresponding value for your locale didn't change.",
-                status.getMessage());
-            return;
+            actualMessage = status.getMessage();
+            break;
         }
-        errln("No failure message.");
+        assertEquals(
+            title,
+            expectedMessage,
+            actualMessage);
+
     }
 
     public void TestCheckNewRootFailure() {
@@ -742,18 +768,16 @@ public class TestCheckCLDR extends TestFmwk {
 
                     for (PathHeader ph : sorted) {
                         String path = ph.getOriginalPath();
-
-                        //String phString = ph.toString();
                         SurveyToolStatus surveyToolStatus = ph.getSurveyToolStatus();
                         dummyPathValueInfo.xpath = path;
                         dummyPathValueInfo.baselineValue = cldrFileUnresolved.getStringValue(path);
                         StatusAction action = phase.getShowRowAction(
                             dummyPathValueInfo,
                             InputMethod.DIRECT,
-                            surveyToolStatus,
+                            ph,
                             dummyUserInfo);
 
-                        if (surveyToolStatus == SurveyToolStatus.HIDE) {
+                        if (ph.shouldHide()) {
                             assertEquals("HIDE ==> FORBID_READONLY", StatusAction.FORBID_READONLY, action);
                         } else if (CheckCLDR.LIMITED_SUBMISSION) {
                             if (status == CheckStatus.Type.Error) {
@@ -775,7 +799,7 @@ public class TestCheckCLDR extends TestFmwk {
                                     StatusAction action2 = phase.getShowRowAction(
                                         dummyPathValueInfo,
                                         InputMethod.DIRECT,
-                                        surveyToolStatus,
+                                        ph,
                                         dummyUserInfo);
                                 }
                                 actionToExamplePath.put(key, Pair.of(dummyPathValueInfo.baselineValue != null, path));
@@ -989,26 +1013,61 @@ public class TestCheckCLDR extends TestFmwk {
     }
 
     public void TestInfohubLinks13979() {
-       CLDRFile root = cldrFactory.make("root", true);
-       List<CheckStatus> possibleErrors = new ArrayList<>();
-       String[][] tests = {
-           // test edge cases
-           // locale, path, value, expected
-           {"fr", "//ldml/numbers/minimalPairs/genderMinimalPairs[@gender=\"feminine\"]", "de genre féminin",
-               "Need at least 1 placeholder(s), but only have 0. Placeholders are: {{0}={GENDER}, e.g. “‹noun phrase in this gender›”}; see <a href='http://cldr.unicode.org/translation/error-codes#missingPlaceholders'  target='cldr_error_codes'>missing placeholders</a>."},
-       };
-       for (String[] row : tests) {
-           String localeId = row[0];
-           String path = row[1];
-           String value = row[2];
-           String expected = row[3];
+        CLDRFile root = cldrFactory.make("root", true);
+        List<CheckStatus> possibleErrors = new ArrayList<>();
+        String[][] tests = {
+            // test edge cases
+            // locale, path, value, expected
+            {"fr", "//ldml/numbers/minimalPairs/genderMinimalPairs[@gender=\"feminine\"]", "de genre féminin",
+            "Need at least 1 placeholder(s), but only have 0. Placeholders are: {{0}={GENDER}, e.g. “‹noun phrase in this gender›”}; see <a href='http://cldr.unicode.org/translation/error-codes#missingPlaceholders'  target='cldr_error_codes'>missing placeholders</a>."},
+        };
+        for (String[] row : tests) {
+            String localeId = row[0];
+            String path = row[1];
+            String value = row[2];
+            String expected = row[3];
 
-           checkPathValue(root, localeId, path,value, possibleErrors);
-           for (CheckStatus error : possibleErrors) {
-               if (error.getSubtype() == Subtype.missingPlaceholders) {
-                assertEquals("message", expected, error.getMessage());
-               }
-           }
-       }
+            checkPathValue(root, localeId, path,value, possibleErrors);
+            for (CheckStatus error : possibleErrors) {
+                if (error.getSubtype() == Subtype.missingPlaceholders) {
+                    assertEquals("message", expected, error.getMessage());
+                }
+            }
+        }
     }
+    public void Test14866() {
+        final SupplementalDataInfo supplementalDataInfo = SupplementalDataInfo.getInstance();
+        String locale = "pl";
+        int expectedCount = 14;
+
+        GrammarInfo grammarInfo = supplementalDataInfo.getGrammarInfo(locale);
+        logln("Locale:\t" + locale + "\n\tGrammarInfo:\t" + grammarInfo);
+        CLDRFile pl = factory.make(locale, true);
+        System.out.println("");
+        Collection<PathHeader> pathHeaders = new TreeSet<>(); // new ArrayList(); //
+        for (String path : pl.fullIterable()) {
+            if (path.startsWith("//ldml/units/unitLength[@type=\"long\"]/unit[@type=\"duration-century\"]")) {
+                PathHeader pathHeader = PathHeader.getFactory().fromPath(path);
+                boolean added = pathHeaders.add(pathHeader);
+            }
+        }
+        int count = 0;
+        for (PathHeader pathHeader : pathHeaders) {
+            String path = pathHeader.getOriginalPath();
+            String value = pl.getStringValue(path);
+            CLDRFile.Status status = new CLDRFile.Status();
+            String localeFound = pl.getSourceLocaleID(path, status);
+            Level level = supplementalDataInfo.getCoverageLevel(path, locale);
+            logln(
+                "\n\t" + ++count  + " Locale:\t" + locale
+                + "\n\tLocaleFound:\t" + (locale.equals(localeFound) ? "«same»" : localeFound)
+                + "\n\tPathHeader:\t" + pathHeader
+                + "\n\tPath:    \t" + path
+                + "\n\tPathFound:\t" + (path.equals(status.pathWhereFound) ? "«same»" : status.pathWhereFound)
+                + "\n\tValue:\t" + value
+                + "\n\tLevel:\t" + level);
+        }
+        assertEquals("right number of elements found", expectedCount, count);
+    }
+
 }

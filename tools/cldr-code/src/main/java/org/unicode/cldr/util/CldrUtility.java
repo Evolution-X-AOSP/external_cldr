@@ -156,7 +156,7 @@ public class CldrUtility {
         return PathUtilities.getNormalizedPathString(path) + File.separatorChar;
     }
 
-    static String getPath(String path) {
+    public static String getPath(String path) {
         return getPath(path, null);
     }
 
@@ -1390,7 +1390,7 @@ public class CldrUtility {
         // now do the rest
         return linePrefix + "Copyright \u00A9 1991-" + Calendar.getInstance().get(Calendar.YEAR) + " Unicode, Inc." + CldrUtility.LINE_SEPARATOR
             + linePrefix + "For terms of use, see http://www.unicode.org/copyright.html" + CldrUtility.LINE_SEPARATOR
-            + linePrefix + "Unicode and the Unicode Logo are registered trademarks of Unicode, Inc. in the U.S. and other countries." + CldrUtility.LINE_SEPARATOR
+            + linePrefix + CLDRURLS.UNICODE_SPDX_HEADER + CldrUtility.LINE_SEPARATOR
             + linePrefix + "CLDR data files are interpreted according to the LDML specification " + "(http://unicode.org/reports/tr35/)";
     }
 

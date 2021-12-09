@@ -1,9 +1,6 @@
 package org.unicode.cldr.util;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,20 +17,17 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.unicode.cldr.draft.FileUtilities;
 import org.unicode.cldr.test.CheckCLDR;
 import org.unicode.cldr.test.CheckCLDR.CheckStatus;
 import org.unicode.cldr.test.CheckCLDR.CheckStatus.Subtype;
+import org.unicode.cldr.test.CheckCLDR.Options;
 import org.unicode.cldr.test.CheckCoverage;
 import org.unicode.cldr.test.CheckNew;
 import org.unicode.cldr.test.CoverageLevel2;
 import org.unicode.cldr.test.OutdatedPaths;
 import org.unicode.cldr.test.SubmissionLocales;
-import org.unicode.cldr.tool.Option;
-import org.unicode.cldr.tool.Option.Options;
 import org.unicode.cldr.util.CLDRFile.Status;
 import org.unicode.cldr.util.PathHeader.PageId;
 import org.unicode.cldr.util.PathHeader.SectionId;
@@ -57,6 +51,8 @@ import com.ibm.icu.util.ULocale;
  */
 public class VettingViewer<T> {
 
+    private static final boolean DEBUG = false;
+
     private static boolean SHOW_SUBTYPES = true; // CldrUtility.getProperty("SHOW_SUBTYPES", "false").equals("true");
 
     private static final String CONNECT_PREFIX = "₍_";
@@ -65,12 +61,6 @@ public class VettingViewer<T> {
     private static final String TH_AND_STYLES = "<th class='tv-th' style='text-align:left'>";
 
     private static final String SPLIT_CHAR = "\uFFFE";
-
-    private static final String TEST_PATH = "//ldml/localeDisplayNames/territories/territory[@type=\"SX\"]";
-    private static final double NANOSECS = 1000000000.0;
-    private static final boolean TESTING = CldrUtility.getProperty("TEST", false);
-
-    public static final Pattern ALT_PROPOSED = PatternCache.get("\\[@alt=\"[^\"]*proposed");
 
     private static final boolean DEBUG_THREADS = false;
 
@@ -257,8 +247,6 @@ public class VettingViewer<T> {
          * or null if none of the users in the organization voted for the path. <br>
          * NOTE: Would be easier if this were a method on CLDRFile.
          * NOTE: if user = null, then it must return the absolute winning value.
-         *
-         * @param locale
          */
         public String getWinningValueForUsersOrganization(CLDRFile cldrFile, String path, T user);
 
@@ -266,10 +254,10 @@ public class VettingViewer<T> {
          *
          * Return the vote status
          * NOTE: if user = null, then it must disregard the user and never return losing. See VoteStatus.
-         *
-         * @param locale
          */
         public VoteStatus getStatusForUsersOrganization(CLDRFile cldrFile, String path, T user);
+
+        public VoteResolver<String> getVoteResolver(CLDRLocale loc, String path);
     }
 
     public static interface ErrorChecker {
@@ -348,7 +336,7 @@ public class VettingViewer<T> {
             options = new HashMap<>();
             result = new ArrayList<>();
             checkCldr = CheckCLDR.getCheckAll(factory, ".*");
-            checkCldr.setCldrFileToCheck(cldrFile, options, result);
+            checkCldr.setCldrFileToCheck(cldrFile, new Options(options), result);
             return Status.ok;
         }
 
@@ -417,7 +405,6 @@ public class VettingViewer<T> {
     private final SupplementalDataInfo supplementalDataInfo;
     private final String baselineTitle = "Baseline";
     private final String currentWinningTitle;
-
     private final Set<String> defaultContentLocales;
 
     /**
@@ -450,9 +437,9 @@ public class VettingViewer<T> {
         public final Set<Choice> problems;
         public final String htmlMessage;
 
-        public WritingInfo(PathHeader pretty, EnumSet<Choice> problems, CharSequence htmlMessage) {
+        public WritingInfo(PathHeader ph, EnumSet<Choice> problems, CharSequence htmlMessage) {
             super();
-            this.codeOutput = pretty;
+            this.codeOutput = ph;
             this.problems = Collections.unmodifiableSet(problems.clone());
             this.htmlMessage = htmlMessage.toString();
         }
@@ -477,9 +464,11 @@ public class VettingViewer<T> {
      * @param localeId
      * @param user
      * @param usersLevel
+     *
+     * Called only by VettingViewerQueue.processCriticalWork, for Priority Items Summary; not used for Dashboard
      */
     public void generateHtmlErrorTables(Appendable output, EnumSet<Choice> choices, String localeID, T user,
-        Level usersLevel, boolean quick) {
+        Level usersLevel) {
 
         // Gather the relevant paths
         // each one will be marked with the choice that it triggered.
@@ -490,36 +479,25 @@ public class VettingViewer<T> {
 
         // Initialize
         CLDRFile baselineFile = null;
-        if (!quick) {
-            try {
-                Factory baselineFactory = CLDRConfig.getInstance().getCommonAndSeedAndMainAndAnnotationsFactory();
-                baselineFile = baselineFactory.make(localeID, true);
-            } catch (Exception e) {
-            }
+        try {
+            Factory baselineFactory = CLDRConfig.getInstance().getCommonAndSeedAndMainAndAnnotationsFactory();
+            baselineFile = baselineFactory.make(localeID, true);
+        } catch (Exception e) {
         }
 
         FileInfo fileInfo = new FileInfo().getFileInfo(sourceFile, baselineFile, sorted, choices, localeID, user,
-            usersLevel, quick);
+            usersLevel, null);
 
         // now write the results out
-        writeTables(output, sourceFile, baselineFile, sorted, choices, fileInfo, quick);
+        writeTables(output, sourceFile, baselineFile, sorted, choices, fileInfo);
     }
 
     /**
-     * Give the list of errors
-     *
-     * @param output
-     * @param choices
-     *            See the class description for more information.
-     * @param localeId
-     * @param user
-     * @param usersLevel
-     * @param nonVettingPhase
-     *
-     * Called only by writeVettingViewerOutput
+     * Give the list of errors for the Dashboard
+     * Not used for Priority Items Summary
      */
     public Relation<R2<SectionId, PageId>, WritingInfo> generateFileInfoReview(EnumSet<Choice> choices, String localeID, T user,
-        Level usersLevel, boolean quick, CLDRFile sourceFile, CLDRFile baselineFile) {
+        Level usersLevel, CLDRFile sourceFile, CLDRFile baselineFile) {
 
         // Gather the relevant paths
         // each one will be marked with the choice that it triggered.
@@ -527,9 +505,7 @@ public class VettingViewer<T> {
             new TreeMap<R2<SectionId, PageId>, Set<WritingInfo>>(), TreeSet.class);
 
         new FileInfo().getFileInfo(sourceFile, baselineFile, sorted, choices, localeID, user,
-            usersLevel, quick);
-
-        // now write the results out
+            usersLevel, null);
 
         return sorted;
     }
@@ -546,38 +522,27 @@ public class VettingViewer<T> {
             warningSubtypeCounter.addAll(other.warningSubtypeCounter);
         }
 
-        private FileInfo getFileInfo(CLDRFile sourceFile, CLDRFile baselineFile,
-            Relation<R2<SectionId, PageId>, WritingInfo> sorted,
-            EnumSet<Choice> choices, String localeID,
-            T user, Level usersLevel, boolean quick) {
-            return this.getFileInfo(sourceFile, baselineFile, sorted,
-                choices, localeID,
-                user, usersLevel, quick, null);
-        }
-
         /**
          * Loop through paths for the Dashboard or the Priority Items Summary
          *
          * @param sourceFile
-         * @param baselineFile
+         * @param baselineFile null (unused) for Dashboard; maybe used for Priority Items Summary
          * @param sorted
          * @param choices
          * @param localeID
          * @param user
          * @param usersLevel
-         * @param quick
-         * @param xpath
-         * @return
+         * @param specificSinglePath if not null, skip all paths except this one
+         * @return the FileInfo
          */
         private FileInfo getFileInfo(CLDRFile sourceFile, CLDRFile baselineFile,
             Relation<R2<SectionId, PageId>, WritingInfo> sorted,
             EnumSet<Choice> choices, String localeID,
-            T user, Level usersLevel, boolean quick, String xpath) {
+            T user, Level usersLevel, String specificSinglePath) {
             if(progressCallback.isStopped()) throw new RuntimeException("Requested to stop");
             final DefaultErrorStatus errorChecker = new DefaultErrorStatus(cldrFactory);
 
             errorChecker.initErrorStatus(sourceFile);
-            Matcher altProposed = ALT_PROPOSED.matcher("");
             problems = EnumSet.noneOf(Choice.class);
 
             // now look through the paths
@@ -589,16 +554,13 @@ public class VettingViewer<T> {
             boolean latin = VettingViewer.isLatinScriptLocale(sourceFile);
             CLDRFile baselineFileUnresolved = (baselineFile == null) ? null : baselineFile.getUnresolved();
             for (String path : sourceFile.fullIterable()) {
-                if (xpath != null && !xpath.equals(path))
+                if (specificSinglePath != null && !specificSinglePath.equals(path)) {
                     continue;
+                }
                 String value = sourceFile.getWinningValueForVettingViewer(path);
                 statusMessage.setLength(0);
                 subtypes.clear();
                 ErrorChecker.Status errorStatus = errorChecker.getErrorStatus(path, value, statusMessage, subtypes);
-
-                if (quick && errorStatus != ErrorChecker.Status.error && errorStatus != ErrorChecker.Status.warning) { //skip all values but errors and warnings if in "quick" mode
-                    continue;
-                }
 
                 if (seenSoFar.contains(path)) {
                     continue;
@@ -606,21 +568,12 @@ public class VettingViewer<T> {
                 seenSoFar.add(path);
                 progressCallback.nudge(); // Let the user know we're moving along.
 
-                PathHeader pretty = pathTransform.fromPath(path);
-                if (pretty.getSurveyToolStatus() == PathHeader.SurveyToolStatus.HIDE) {
+                PathHeader ph = pathTransform.fromPath(path);
+                if (ph == null || ph.shouldHide()) {
                     continue;
                 }
 
                 // note that the value might be missing!
-
-                // make sure we only look at the real values
-                if (altProposed.reset(path).find()) {
-                    continue;
-                }
-
-                if (path.contains("/references")) {
-                    continue;
-                }
 
                 Level level = supplementalDataInfo.getCoverageLevel(path, sourceFile.getLocaleID());
 
@@ -654,7 +607,13 @@ public class VettingViewer<T> {
                 MissingStatus missingStatus = null;
 
                 if (!onlyRecordErrors) {
-                    missingStatus = getMissingStatus(sourceFile, path, latin);
+                    CLDRLocale loc = CLDRLocale.getInstance(localeID);
+                    VoteResolver<String> resolver = userVoteStatus.getVoteResolver(loc, path);
+                    if (resolver.getWinningStatus() == VoteResolver.Status.missing) {
+                        missingStatus = getMissingStatus(sourceFile, path, latin);
+                    } else {
+                        missingStatus = MissingStatus.PRESENT;
+                    }
                     if (choices.contains(Choice.missingCoverage) && missingStatus == MissingStatus.ABSENT) {
                         problems.add(Choice.missingCoverage);
                         problemCounter.increment(Choice.missingCoverage);
@@ -663,11 +622,16 @@ public class VettingViewer<T> {
                         problems.add(Choice.englishChanged);
                         problemCounter.increment(Choice.englishChanged);
                     }
-                    if (!CheckCLDR.LIMITED_SUBMISSION && !itemsOkIfVoted && outdatedPaths.isOutdated(localeID, path)) {
-                        if (Objects.equals(value, oldValue) && choices.contains(Choice.englishChanged)) {
-                            // check to see if we voted
-                            problems.add(Choice.englishChanged);
-                            problemCounter.increment(Choice.englishChanged);
+                    if (!CheckCLDR.LIMITED_SUBMISSION
+                        && !itemsOkIfVoted && outdatedPaths.isOutdated(localeID, path)) {
+                        if (Objects.equals(value, oldValue)
+                            && choices.contains(Choice.englishChanged)) {
+                            String oldEnglishValue = outdatedPaths.getPreviousEnglish(path);
+                            if (!OutdatedPaths.NO_VALUE.equals(oldEnglishValue)) {
+                                // check to see if we voted
+                                problems.add(Choice.englishChanged);
+                                problemCounter.increment(Choice.englishChanged);
+                            }
                         }
                     }
                 }
@@ -723,15 +687,15 @@ public class VettingViewer<T> {
                     }
                 }
 
-                if (xpath != null)
+                if (specificSinglePath != null)
                     return this;
 
                 if (!problems.isEmpty()) {
                     if (sorted != null) {
                         reasonsToPaths.clear();
-                        R2<SectionId, PageId> group = Row.of(pretty.getSectionId(), pretty.getPageId());
+                        R2<SectionId, PageId> group = Row.of(ph.getSectionId(), ph.getPageId());
 
-                        sorted.put(group, new WritingInfo(pretty, problems, htmlMessage));
+                        sorted.put(group, new WritingInfo(ph, problems, htmlMessage));
                     }
                 }
 
@@ -831,7 +795,6 @@ public class VettingViewer<T> {
         private int configParallel; // parallelism. 0 means "let Java decide"
         private int configChunkSize; // Number of locales to process at once, minimum 1
 
-        @SuppressWarnings("unchecked")
         public WriteContext(Set<Entry<String, String>> entrySet, EnumSet<Choice> choices, T organization, FileInfo totals, Map<String, VettingViewer<T>.FileInfo> localeNameToFileInfo, String header) {
             for(Entry<String, String> e : entrySet) {
                 localeNames.add(e.getKey());
@@ -880,15 +843,15 @@ public class VettingViewer<T> {
             char lastChar = ' ';
 
             for(int n=0;n<outputs.length;n++) {
-              final String name = localeNames.get(n);
-              if(DEBUG_THREADS) System.err.println("Appending " + name + " - " + outputs[n].length());
-              output.append(outputs[n]);
+                final String name = localeNames.get(n);
+                if(DEBUG_THREADS) System.err.println("Appending " + name + " - " + outputs[n].length());
+                output.append(outputs[n]);
 
-              char nextChar = name.charAt(0);
-              if (lastChar != nextChar) {
-                  output.append(this.header);
-                  lastChar = nextChar;
-              }
+                char nextChar = name.charAt(0);
+                if (lastChar != nextChar) {
+                    output.append(this.header);
+                    lastChar = nextChar;
+                }
             }
         }
 
@@ -910,7 +873,7 @@ public class VettingViewer<T> {
      *
      */
     private class WriteAction extends RecursiveAction {
-       private int length;
+        private int length;
         private int start;
         private WriteContext context;
 
@@ -939,7 +902,7 @@ public class VettingViewer<T> {
                 int split = length / 2;
                 // subdivide
                 invokeAll(new WriteAction(context, start, split),
-                          new WriteAction(context, start+split, length-split));
+                    new WriteAction(context, start+split, length-split));
             }
         }
 
@@ -955,7 +918,7 @@ public class VettingViewer<T> {
         }
 
         /**
-         * Calculate the VettingViewer output for one locale
+         * Calculate the Priority Items Summary output for one locale
          * @param n
          */
         void computeOne(int n) {
@@ -984,7 +947,7 @@ public class VettingViewer<T> {
             if (context.organization != null) {
                 level = StandardCodes.make().getLocaleCoverageLevel(context.organization.toString(), localeID);
             }
-            FileInfo fileInfo = new FileInfo().getFileInfo(sourceFile, baselineFile, null, choices, localeID, context.organization, level, false);
+            FileInfo fileInfo = new FileInfo().getFileInfo(sourceFile, baselineFile, null, choices, localeID, context.organization, level, null);
             context.localeNameToFileInfo.put(name, fileInfo);
             context.totals.addAll(fileInfo);
             if(DEBUG_THREADS) System.err.println("writeAction.compute("+n+") - got fileinfo " + name + ": "+ localeID);
@@ -1001,7 +964,7 @@ public class VettingViewer<T> {
     }
 
     /**
-     *
+     * Write the table for the Priority Items Summary
      * @param output
      * @param header
      * @param desiredLevel
@@ -1166,8 +1129,6 @@ public class VettingViewer<T> {
         .append("</code>");
     }
 
-    LanguageTagParser ltp = new LanguageTagParser();
-
     private String getName(String localeID) {
         Set<String> contents = supplementalDataInfo.getEquivalentsForLocale(localeID);
         // put in special character that can be split on later
@@ -1182,7 +1143,7 @@ public class VettingViewer<T> {
      {en, en_US, en_Latn, en_Latn_US} => en(_Latn)(_US)
      {az_IR, az_Arab, az_Arab_IR} => az_IR, az_Arab(_IR)
      */
-    public static String gatherCodes(Set<String> contents) {
+    private static String gatherCodes(Set<String> contents) {
         Set<Set<String>> source = new LinkedHashSet<>();
         for (String s : contents) {
             source.add(new LinkedHashSet<>(Arrays.asList(s.split("_"))));
@@ -1240,12 +1201,36 @@ public class VettingViewer<T> {
         return result;
     }
 
+    /**
+     * Used to determine what the status of a particular path's value is in a given locale.
+     */
     public enum MissingStatus {
-        PRESENT, ALIASED, MISSING_OK, ROOT_OK, ABSENT
+        /** There is an explicit value for the path, including ↑↑↑,
+         * or there is an inherited value (but not including the ABSENT conditions, eg not from root).
+         */
+        PRESENT,
+
+        /** The value is inherited from a different path. Only applies if the parent is not root.
+         * That path might be in the same locale or from a parent (but not root or CODE_FALLBACK).
+         */
+        ALIASED,
+
+        /** See ABSENT
+         */
+        MISSING_OK,
+
+        /** See ABSENT
+         */
+        ROOT_OK,
+
+        /** The supplied CLDRFile is null, or the value is null, or the value is inherited from root or CODE_FALLBACK.
+         * A special ValuePathStatus.isMissingOk method allows for some exceptions, changing the result to  MISSING_OK or ROOT_OK.
+         */
+        ABSENT
     }
 
     /**
-     * Get the MissingStatus
+     * Get the MissingStatus: for details see the javadoc for MissingStatus.
      *
      * @param sourceFile the CLDRFile
      * @param path the path
@@ -1256,21 +1241,29 @@ public class VettingViewer<T> {
         if (sourceFile == null) {
             return MissingStatus.ABSENT;
         }
-        if ("root".equals(sourceFile.getLocaleID()) || path.startsWith("//ldml/layout/orientation/")) {
+        final String sourceLocaleID = sourceFile.getLocaleID();
+        if ("root".equals(sourceLocaleID)) { // path.startsWith("//ldml/layout/orientation/" moved to missingOk.txt
             return MissingStatus.MISSING_OK;
-        }
-        if (path.equals(TEST_PATH)) {
-            int debug = 1;
         }
         MissingStatus result;
 
         String value = sourceFile.getStringValue(path);
         Status status = new Status();
-        sourceFile.getSourceLocaleID(path, status);
+        String sourceLocale = sourceFile.getSourceLocaleIdExtended(path, status, false); // does not skip inheritance marker
+
         boolean isAliased = !path.equals(status.pathWhereFound); // this was path.equals, which would be incorrect!
+        if (DEBUG) {
+            if (path.equals("//ldml/characterLabels/characterLabelPattern[@type=\"subscript\"]")) {
+                int debug = 0;
+            }
+            if (!isAliased && !sourceLocale.equals(sourceLocaleID)) {
+                int debug = 0;
+            }
+        }
 
         if (value == null) {
-            result = ValuePathStatus.isMissingOk(sourceFile, path, latin, isAliased) ? MissingStatus.MISSING_OK : MissingStatus.ABSENT;
+            result = ValuePathStatus.isMissingOk(sourceFile, path, latin, isAliased) ? MissingStatus.MISSING_OK
+                : MissingStatus.ABSENT;
         } else {
             /*
              * skipInheritanceMarker must be false for getSourceLocaleIdExtended here, since INHERITANCE_MARKER
@@ -1278,21 +1271,27 @@ public class VettingViewer<T> {
              * treat the item as missing. Reference: https://unicode.org/cldr/trac/ticket/11765
              */
             String localeFound = sourceFile.getSourceLocaleIdExtended(path, status, false /* skipInheritanceMarker */);
+            final boolean localeFoundIsRootOrCodeFallback = localeFound.equals("root")
+                || localeFound.equals(XMLSource.CODE_FALLBACK_ID);
+            final boolean isParentRoot = CLDRLocale.getInstance(sourceFile.getLocaleID()).isParentRoot();
             /*
              * Only count it as missing IF the (localeFound is root or codeFallback)
              * AND the aliasing didn't change the path.
              * Note that localeFound will be where an item with ↑↑↑ was found even though
-             * the value is actually inherited from somewhere else.
+             * the resolved value is actually inherited from somewhere else.
              */
-            if (localeFound.equals("root") || localeFound.equals(XMLSource.CODE_FALLBACK_ID)) {
-                result = ValuePathStatus.isMissingOk(sourceFile, path, latin, isAliased)
-                    || sourceFile.getLocaleID().equals("en")
-                    ? MissingStatus.ROOT_OK
-                        : MissingStatus.ABSENT;
-            } else if (isAliased) {
-                result = MissingStatus.ALIASED;
-            } else {
+
+            if (localeFoundIsRootOrCodeFallback) {
+                result = ValuePathStatus.isMissingOk(sourceFile, path, latin, isAliased) ? MissingStatus.ROOT_OK
+                    : isParentRoot ? MissingStatus.ABSENT
+                        : MissingStatus.ALIASED;
+            } else if (!isAliased) {
                 result = MissingStatus.PRESENT;
+            } else if (isParentRoot) { // We handle ALIASED specially, depending on whether the parent is root or not.
+                result = ValuePathStatus.isMissingOk(sourceFile, path, latin, isAliased) ? MissingStatus.MISSING_OK
+                    : MissingStatus.ABSENT;
+            } else {
+                result = MissingStatus.ALIASED;
             }
         }
         return result;
@@ -1394,11 +1393,20 @@ public class VettingViewer<T> {
             + "</style>";
     }
 
+    /**
+     * For Priority Items Summary
+     *
+     * @param output
+     * @param sourceFile
+     * @param baselineFile
+     * @param sorted
+     * @param choices
+     * @param outputFileInfo
+     */
     private void writeTables(Appendable output, CLDRFile sourceFile, CLDRFile baselineFile,
         Relation<R2<SectionId, PageId>, WritingInfo> sorted,
         EnumSet<Choice> choices,
-        FileInfo outputFileInfo,
-        boolean quick) {
+        FileInfo outputFileInfo) {
         try {
 
             boolean latin = VettingViewer.isLatinScriptLocale(sourceFile);
@@ -1423,9 +1431,6 @@ public class VettingViewer<T> {
             // }
 
             for (Choice choice : choices) {
-                if (quick && choice != Choice.error && choice != Choice.warning) { //if "quick" mode, only show errors and warnings
-                    continue;
-                }
                 long count = outputFileInfo.problemCounter.get(choice);
                 output.append("<tr><td class='tvs-count'>")
                 .append(nf.format(count))
@@ -1575,12 +1580,12 @@ public class VettingViewer<T> {
 
     /**
      *
-     * @param output
      * @param choices
-     *            See the class description for more information.
-     * @param localeId
+     * @param localeID
      * @param user
      * @param usersLevel
+     * @param path
+     * @return
      */
     public ArrayList<String> getErrorOnPath(EnumSet<Choice> choices, String localeID, T user,
         Level usersLevel, String path) {
@@ -1600,8 +1605,10 @@ public class VettingViewer<T> {
         } catch (Exception e) {
         }
 
-        EnumSet<Choice> errors = new FileInfo().getFileInfo(sourceFile, baselineFile, sorted, choices, localeID, user, usersLevel,
-            false, path).problems;
+        FileInfo fi = new FileInfo().getFileInfo(sourceFile, baselineFile, sorted, choices, localeID, user, usersLevel,
+            path);
+
+        EnumSet<Choice> errors = fi.problems;
 
         ArrayList<String> out = new ArrayList<>();
         for (Object error : errors.toArray()) {
@@ -1648,7 +1655,7 @@ public class VettingViewer<T> {
     }
 
     /**
-     * Find the status of the items in the file.
+     * Find the status of all the paths in the input file. See the full getStatus for more information.
      * @param file the source. Must be a resolved file, made with minimalDraftStatus = unconfirmed
      * @param pathHeaderFactory PathHeaderFactory.
      * @param foundCounter output counter of the number of paths with values having contributed or approved status
@@ -1666,7 +1673,9 @@ public class VettingViewer<T> {
     }
 
     /**
-     * Find the status of the items in the file.
+     * Find the status of an input set of paths in the input file.
+     * It partitions the returned data according to the Coverage levels.
+     * NOTE: MissingStatus.ALIASED is handled specially; it is mapped to ABSENT if the parent is root, and otherwise mapped to PRESENT.
      * @param allPaths manual list of paths
      * @param file the source. Must be a resolved file, made with minimalDraftStatus = unconfirmed
      * @param pathHeaderFactory PathHeaderFactory.
@@ -1731,195 +1740,5 @@ public class VettingViewer<T> {
                 throw new IllegalArgumentException();
             }
         }
-    }
-
-    /**
-     * Simple example of usage
-     *
-     * @param args
-     * @throws IOException
-     */
-    final static Options myOptions = new Options();
-
-    enum MyOptions {
-        repeat(null, null, "Repeat indefinitely"),
-        filter(".*", ".*", "Filter files"),
-        locale(".*", "af", "Single locale for testing"),
-        source(".*", CLDRPaths.MAIN_DIRECTORY + "," + CLDRPaths.ANNOTATIONS_DIRECTORY, // CldrUtility.TMP2_DIRECTORY + "/vxml/common/main"
-            "if summary, creates filtered version (eg -d main): does a find in the name, which is of the form dir/file"),
-        verbose(null, null, "verbose debugging messages"),
-        output(".*", CLDRPaths.GEN_DIRECTORY + "vetting/", "filter the raw files (non-summary, mostly for debugging)"),;
-        // boilerplate
-        final Option option;
-
-        MyOptions(String argumentPattern, String defaultArgument, String helpText) {
-            option = myOptions.add(this, argumentPattern, defaultArgument, helpText);
-        }
-    }
-
-    public static void main(String[] args) throws IOException {
-        SHOW_SUBTYPES = true;
-        myOptions.parse(MyOptions.source, args, true);
-        boolean repeat = MyOptions.repeat.option.doesOccur();
-        String fileFilter = MyOptions.filter.option.getValue();
-        String myOutputDir = repeat ? null : MyOptions.output.option.getValue();
-        String LOCALE = MyOptions.locale.option.getValue();
-
-        String[] DIRECTORIES = MyOptions.source.option.getValue().split(",\\s*");
-        final File[] fileDirectories = new File[DIRECTORIES.length];
-        int i = 0;
-        for (String s : DIRECTORIES) {
-            fileDirectories[i++] = new File(s);
-        }
-
-        do {
-            Timer timer = new Timer();
-            timer.start();
-
-            Factory cldrFactory = SimpleFactory.make(fileDirectories, fileFilter);
-            cldrFactory.setSupplementalDirectory(new File(CLDRPaths.SUPPLEMENTAL_DIRECTORY));
-            SupplementalDataInfo supplementalDataInfo = SupplementalDataInfo
-                .getInstance(CLDRPaths.SUPPLEMENTAL_DIRECTORY);
-            CheckCLDR.setDisplayInformation(cldrFactory.make("en", true));
-
-            // FAKE this, because we don't have access to ST data
-
-            UsersChoice<Organization> usersChoice = new UsersChoice<Organization>() {
-                // Fake values for now
-                @Override
-                @SuppressWarnings("unused")
-                public String getWinningValueForUsersOrganization(CLDRFile cldrFile, String path, Organization user) {
-                    if (path.contains("USD")) {
-                        return "&dummy ‘losing’ value";
-                    }
-                    return null; // assume we didn't vote on anything else.
-                }
-
-                // Fake values for now
-                @Override
-                public VoteStatus getStatusForUsersOrganization(CLDRFile cldrFile, String path, Organization user) {
-                    String usersValue = getWinningValueForUsersOrganization(cldrFile, path, user);
-                    String winningValue = cldrFile.getWinningValue(path);
-                    if (usersValue != null && !Objects.equals(usersValue, winningValue)) {
-                        return VoteStatus.losing;
-                    }
-                    String fullPath = cldrFile.getFullXPath(path);
-                    if (fullPath.contains("AMD") || fullPath.contains("unconfirmed") || fullPath.contains("provisional")) {
-                        return VoteStatus.provisionalOrWorse;
-                    } else if (fullPath.contains("AED")) {
-                        return VoteStatus.disputed;
-                    } else if (fullPath.contains("AED")) {
-                        return VoteStatus.ok_novotes;
-                    }
-                    return VoteStatus.ok;
-                }
-            };
-
-            // create the tableView and set the options desired.
-            // The Options should come from a GUI; from each you can get a long
-            // description and a button label.
-            // Assuming user can be identified by an int
-            VettingViewer<Organization> tableView = new VettingViewer<>(supplementalDataInfo, cldrFactory,
-                usersChoice, "Winning Proposed");
-
-            // here are per-view parameters
-
-            final EnumSet<Choice> choiceSet = EnumSet.allOf(Choice.class);
-            String localeStringID = LOCALE;
-            int userNumericID = 666;
-            Level usersLevel = Level.MODERN;
-            // http: // unicode.org/cldr-apps/survey?_=ur
-
-            if (!repeat) {
-                FileCopier.ensureDirectoryExists(myOutputDir);
-                FileCopier.copy(VettingViewer.class, "vettingView.css", myOutputDir);
-                FileCopier.copy(VettingViewer.class, "vettingView.js", myOutputDir);
-            }
-            System.out.println("Creation: " + timer.getDuration() / NANOSECS + " secs");
-
-            timer.start();
-            writeFile(myOutputDir, tableView, choiceSet, "", localeStringID, userNumericID, usersLevel, CodeChoice.newCode, null);
-            System.out.println("Code: " + timer.getDuration() / NANOSECS + " secs");
-
-            timer.start();
-            writeFile(myOutputDir, tableView, choiceSet, "", localeStringID, userNumericID, usersLevel, CodeChoice.summary,
-                Organization.google);
-            System.out.println("Summary: " + timer.getDuration() / NANOSECS + " secs");
-        } while (repeat);
-    }
-
-    private enum CodeChoice {
-        /** For the normal (locale) view of data **/
-        newCode,
-
-        /** For a summary view of data **/
-        summary
-    }
-
-    /**
-     *
-     * @param myOutputDir
-     * @param tableView
-     * @param choiceSet
-     * @param name
-     * @param localeStringID
-     * @param userNumericID
-     * @param usersLevel
-     * @param newCode
-     * @param organization
-     * @throws IOException
-     *
-     * Called only by VettingViewer.main
-     */
-    public static void writeFile(String myOutputDir, VettingViewer<Organization> tableView, final EnumSet<Choice> choiceSet,
-        String name, String localeStringID, int userNumericID,
-        Level usersLevel,
-        CodeChoice newCode, Organization organization)
-            throws IOException {
-        // open up a file, and output some of the styles to control the table
-        // appearance
-        PrintWriter out = myOutputDir == null ? new PrintWriter(new StringWriter())
-            : FileUtilities.openUTF8Writer(myOutputDir, "vettingView"
-                + name
-                + (newCode == CodeChoice.newCode ? "" : newCode == CodeChoice.summary ? "-summary" : "")
-                + (organization == null ? "" : "-" + organization.toString())
-                + ".html");
-//        FileUtilities.appendFile(VettingViewer.class, "vettingViewerHead.txt", out);
-        FileCopier.copy(VettingViewer.class, "vettingViewerHead.txt", out);
-        out.append(getHeaderStyles());
-        out.append("</head><body>\n");
-
-        out.println(
-            "<p>Note: this is just a sample run. The user, locale, user's coverage level, and choices of tests will change the output. In a real ST page using these, the first three would "
-                + "come from context, and the choices of tests would be set with radio buttons. Demo settings are: </p>\n<ol>"
-                + "<li>choices: "
-                + choiceSet
-                + "</li><li>localeStringID: "
-                + localeStringID
-                + "</li><li>userNumericID: "
-                + userNumericID
-                + "</li><li>usersLevel: "
-                + usersLevel
-                + "</ol>"
-                + "<p>Notes: This is a static version, using old values and faked values (L) just for testing."
-                + (TESTING ? "Also, the white cell after the Fix column is just for testing." : "")
-                + "</p><hr>\n");
-
-        // now generate the table with the desired options
-        // The options should come from a GUI; from each you can get a long
-        // description and a button label.
-        // Assuming user can be identified by an int
-
-        switch (newCode) {
-        case newCode:
-            tableView.generateHtmlErrorTables(out, choiceSet, localeStringID, organization, usersLevel, false);
-            break;
-        case summary:
-            //System.out.println(tableView.getName("zh_Hant_HK"));
-            tableView.generateSummaryHtmlErrorTables(out, choiceSet, organization);
-            break;
-        }
-        out.println("</body>\n</html>\n");
-        out.close();
     }
 }

@@ -201,13 +201,13 @@ public class LogicalGrouping {
             return true;
         case "zero": case "one":
             break; // continue
-        case "many": // special case for french
-            String localeId = cldrFile.getLocaleID();
-            if (localeId.startsWith("fr")
-                && (localeId.length() == 2 || localeId.charAt(2) == '_')) {
-                return true;
-            }
-            return false;
+//        case "many": // special case for french
+//            String localeId = cldrFile.getLocaleID();
+//            if (localeId.startsWith("fr")
+//                && (localeId.length() == 2 || localeId.charAt(2) == '_')) {
+//                return true;
+//            }
+//            return false;
         default:
             return false;
         }
@@ -393,14 +393,14 @@ public class LogicalGrouping {
             @Override
             @SuppressWarnings("unused")
             void addPaths(Set<String> set, CLDRFile cldrFile, String path, XPathParts parts) {
-                if (!GrammarInfo.SEED_LOCALES.contains(cldrFile.getLocaleID())) {
+                if (!GrammarInfo.getGrammarLocales().contains(cldrFile.getLocaleID())) {
                     addCaseOnly(set, cldrFile, parts);
                     return;
                 }
                 GrammarInfo grammarInfo = supplementalData.getGrammarInfo(cldrFile.getLocaleID());
                 if (grammarInfo == null
                     || (parts.getElement(3).equals("unitLength")
-                        && GrammarInfo.SPECIAL_TRANSLATION_UNITS.contains(parts.getAttributeValue(3, "type")))) {
+                        && GrammarInfo.getUnitsToAddGrammar().contains(parts.getAttributeValue(3, "type")))) {
                     addCaseOnly(set, cldrFile, parts);
                     return;
                 }
@@ -414,7 +414,7 @@ public class LogicalGrouping {
             @Override
             @SuppressWarnings("unused")
             void addPaths(Set<String> set, CLDRFile cldrFile, String path, XPathParts parts) {
-                if (!GrammarInfo.SEED_LOCALES.contains(cldrFile.getLocaleID())) {
+                if (!GrammarInfo.getGrammarLocales().contains(cldrFile.getLocaleID())) {
                     addCaseOnly(set, cldrFile, parts);
                     return;
                 }

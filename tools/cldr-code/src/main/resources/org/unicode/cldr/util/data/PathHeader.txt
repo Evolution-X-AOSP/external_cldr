@@ -1,4 +1,5 @@
-# Date for generating Section/Page/Header/Code in Survey Tool and elsewhere.
+# Data for generating Section/Page/Header/Code in Survey Tool and elsewhere.
+# Details: <https://cldr.unicode.org/development/updating-dtds>
 # IMPORTANT:
 # Be careful, order matters. It is used to determine the order on the page and in menus. Also, be sure to put longer matches first, unless terminated with $.
 # The quoting of \[ is handled automatically, as is alt=X
@@ -8,6 +9,7 @@
 # The only function that can be in Page right now are &metazone and &calendar, and NO functions can be in Section
 # A * at the front (like *$1) means to not change the sorting group.
 
+
 # VARIABLES
 %a = [^"]*+
 %A = ([^"]*+)
@@ -16,7 +18,7 @@
 %F = (electric|frequency)
 %H = ([hH])
 %L = (long|short|narrow)
-%M = (Alaska_Hawaii|Bering|Dominican|Goose_Bay|Greenland_Central|Yukon|Dutch_Guiana|Africa_FarWestern|Liberia|British|Irish|Kuybyshev|Sverdlovsk|Baku|Tbilisi|Turkey|Yerevan|Aktyubinsk|Ashkhabad|Dushanbe|Frunze|Kizilorda|Oral|Samarkand|Shevchenko|Tashkent|Uralsk|Urumqi|Dacca|Karachi|Borneo|Malaya|Kwajalein)
+%M = (Alaska_Hawaii|Bering|Dominican|Goose_Bay|Greenland_Central|Dutch_Guiana|Africa_FarWestern|Liberia|British|Irish|Kuybyshev|Sverdlovsk|Baku|Tbilisi|Turkey|Yerevan|Aktyubinsk|Ashkhabad|Dushanbe|Frunze|Kizilorda|Oral|Samarkand|Shevchenko|Tashkent|Uralsk|Urumqi|Dacca|Karachi|Borneo|Malaya|Kwajalein)
 %N = (gregorian|generic|buddhist|chinese|coptic|dangi|ethiopic|hebrew|indian|islamic|japanese|persian|roc)
 %O = (gregorian|chinese|coptic|dangi|ethiopic|hebrew|indian|islamic|persian)
 %P = (future|past)
@@ -27,6 +29,7 @@
 %X = (energy|power)
 
 #RULES
+# <regex> ; <section> ; <page> ; <header> ; <code>
 //ldml/identity/%E[@type="%A"]    ; Special ; Identity ; $1 ; $2 ; HIDE
 //ldml/identity/version                 ; Special ; Version ; null ; version ; HIDE
 //ldml/identity/generation                 ; Special ; Version ; null ; generation ; HIDE
@@ -94,9 +97,11 @@
 //ldml/dates/calendars/calendar[@type="%A"]/dateFormats/dateFormatLength[@type="%A"]/dateFormat[@type="%A"]/pattern[@type="%A"][@count="%A"]       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:date)-$2 ; HIDE
 //ldml/dates/calendars/calendar[@type="%N"]/dateFormats/dateFormatLength[@type="%A"]/dateFormat[@type="%A"]/pattern[@type="%A"]       ; DateTime ; &calendar($1) ; &calField(Formats:Standard:date) ; $2 ; LTR_ALWAYS
 //ldml/dates/calendars/calendar[@type="%A"]/dateFormats/dateFormatLength[@type="%A"]/dateFormat[@type="%A"]/pattern[@type="%A"]       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:date)-$2 ; HIDE
+//ldml/dates/calendars/calendar[@type="%A"]/dateFormats/dateFormatLength[@type="%A"]/dateFormat[@type="%A"]/datetimeSkeleton       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:date)-$2 ; HIDE
 
 //ldml/dates/calendars/calendar[@type="gregorian"]/timeFormats/timeFormatLength[@type="%A"]/timeFormat[@type="%A"]/pattern[@type="%A"]       ; DateTime ; &calendar(gregorian) ; &calField(Formats:Standard:time) ; $1 ; LTR_ALWAYS
 //ldml/dates/calendars/calendar[@type="%A"]/timeFormats/timeFormatLength[@type="%A"]/timeFormat[@type="%A"]/pattern[@type="%A"]       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:time)-$2 ; HIDE
+//ldml/dates/calendars/calendar[@type="%A"]/timeFormats/timeFormatLength[@type="%A"]/timeFormat[@type="%A"]/datetimeSkeleton       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:time)-$2 ; HIDE
 
 //ldml/dates/calendars/calendar[@type="%N"]/dateTimeFormats/dateTimeFormatLength[@type="%A"]/dateTimeFormat[@type="%A"]/pattern[@type="%A"]       ; DateTime ; &calendar($1) ; &calField(Formats:Standard:dateTime) ; $2 ; LTR_ALWAYS
 //ldml/dates/calendars/calendar[@type="%A"]/dateTimeFormats/dateTimeFormatLength[@type="%A"]/dateTimeFormat[@type="%A"]/pattern[@type="%A"]       ; Special  ; Suppress ; &calendar($1) ; &calField(Formats:Standard:dateTime)-$2 ; HIDE
@@ -415,6 +420,7 @@
 //supplementalData/metaZones/metazoneInfo/timezone[@type="%A"]/usesMetazone/_mzone			; Supplemental ; Metazone ; $1 ; -∞..∞ ; HIDE
 
 //supplementalData/metaZones/mapTimezones[@type="%A"]/mapZone[@other="%A"][@territory="%A"]/_type			; Supplemental ; Metazone ; $1 ; $2-$3 ; HIDE
+//supplementalData/metaZones/metazoneIds/metazoneId[@shortId="%A"]/_%E ; Supplemental ; Metazone ; $1 ; $2 ; HIDE
 //supplementalData/primaryZones/primaryZone[@iso3166="%A"]			; Supplemental ; Metazone ; Primary ; $1 ; HIDE
 
 //supplementalData/numberingSystems/numberingSystem[@id="%A"]/_%E			; Supplemental ; NumberSystem ; $1 ; $2 ; HIDE

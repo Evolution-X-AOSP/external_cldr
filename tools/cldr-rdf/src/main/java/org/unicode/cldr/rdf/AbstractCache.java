@@ -4,14 +4,14 @@
 package org.unicode.cldr.rdf;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.common.io.Files;
 
@@ -21,6 +21,8 @@ import com.google.common.io.Files;
  * @author srl295
  */
 public class AbstractCache {
+    // This is equivalent to SurveyLog.forClass()
+    static final Logger logger = Logger.getLogger(AbstractCache.class.getName());
     private static final String XPATH_TO_RESOURCE_FILE = "xpath-to-resource.properties";
 
     /**
@@ -33,7 +35,7 @@ public class AbstractCache {
     public boolean add(String xpath, String uri) {
         return (xpathToResource.put(xpath, uri) != null);
     }
-    
+
     /**
      * Get the xpath mapping, or null
      * @param xpath
@@ -62,7 +64,6 @@ public class AbstractCache {
     /**
      * Load (or reload) the abstract cache.
      * On failure, will clear this cache.
-     * @return date of underlying file on successful load or null
      */
     public Instant load() {
         final String simpleName = this.getClass().getSimpleName();
@@ -71,13 +72,12 @@ public class AbstractCache {
                 Reader xp2res = Files.newReader(xpathToResourceFile, StandardCharsets.UTF_8);
             ) {
                 xpathToResource.load(xp2res);
-                System.err.println("# " + simpleName + " read " + root.getAbsolutePath() + " count: " + size());
+                logger.fine("# " + simpleName + " read " + root.getAbsolutePath() + " count: " + size());
                 return Instant.ofEpochMilli(xpathToResourceFile.lastModified());
             } catch (IOException ioe) {
-            	if (!(ioe instanceof FileNotFoundException)) {
-            		ioe.printStackTrace();
-            	}
-                System.err.println("Could not read files in " + root.getAbsolutePath() + " = " + ioe);
+                logger.log(Level.WARNING, "Could not read files in " + root.getAbsolutePath());
+                // Full stacktrace at a higher trace level
+                logger.log(Level.FINE, "Could not read " + root.getAbsolutePath() + " - " + ioe.getMessage());
                 xpathToResource.clear();
                 return null;
             }
@@ -95,10 +95,10 @@ public class AbstractCache {
                 Writer xp2res = Files.newWriter(xpathToResourceFile, StandardCharsets.UTF_8);
             ) {
                 xpathToResource.store(xp2res, "Written by " + simpleName);
-                System.err.println("# " + simpleName + " wrote to " + root.getAbsolutePath());
+                logger.info("# " + simpleName + " wrote to " + root.getAbsolutePath());
             } catch (IOException ioe) {
                 ioe.printStackTrace();
-                System.err.println("Could not write files in " + root.getAbsolutePath() + " = " + ioe);
+                logger.log(Level.SEVERE, "Could not write files in " + root.getAbsolutePath(), ioe);
             }
         }
     }
